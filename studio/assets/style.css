@@ -1,0 +1,38 @@
+/* 让轨道透明，thumb 很淡；兼容 Chrome/Edge/Safari + Firefox */
+.scroll-clean {
+  /* Firefox */
+  scrollbar-width: thin;                 /* 或 'none' 完全隐藏 */
+  scrollbar-color: rgba(0,0,0,.25) transparent; /* thumb 颜色 / 轨道透明 */
+}
+
+/* WebKit: Chrome/Edge/Safari */
+.scroll-clean::-webkit-scrollbar {
+  width: 8px;            /* 可改 6-10 之间 */
+}
+.scroll-clean::-webkit-scrollbar-track {
+  background: transparent; /* 轨道透明 → 看起来与背景融为一体 */
+}
+.scroll-clean::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,.25);     /* 滑块颜色（浅）*/
+  border-radius: 9999px;                  /* 圆角胶囊 */
+  border: 2px solid transparent;          /* 让滑块与轨道有一点内边距 */
+  background-clip: content-box;
+}
+
+/* 只在悬停滚动区时强化可见度（可选） */
+.scroll-clean:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(0,0,0,.35);
+}
+
+/* 深色模式（可选） */
+@media (prefers-color-scheme: dark) {
+  .scroll-clean {
+    scrollbar-color: rgba(255,255,255,.35) transparent;
+  }
+  .scroll-clean::-webkit-scrollbar-thumb {
+    background-color: rgba(255,255,255,.28);
+  }
+  .scroll-clean:hover::-webkit-scrollbar-thumb {
+    background-color: rgba(255,255,255,.4);
+  }
+}

@@ -6,7 +6,11 @@ def deploy_dialog() -> rx.Component:
     return rx.dialog.root(
         rx.dialog.content(
             rx.dialog.title("Optimize your prompt"),
-            rx.dialog.description("with Volcengine PromptPilot"),
+            rx.dialog.description(
+                "with Volcengine PromptPilot",
+                size="2",
+                margin_bottom="16px",
+            ),
             rx.hstack(
                 rx.vstack(
                     rx.form(
@@ -50,4 +54,5 @@ def deploy_dialog() -> rx.Component:
             ),
         ),
         open=PageState.deploy_dialog_flag,
+        on_open_change=PageState.set_deploy_dialog_flag,
     )
