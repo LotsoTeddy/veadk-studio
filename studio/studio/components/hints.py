@@ -1,0 +1,51 @@
+import reflex as rx
+from studio.state import AgentState, ChatState
+
+
+def template_card(icon: str, title: str, description: str, color: str) -> rx.Component:
+    return rx.el.button(
+        rx.icon(tag=icon, color=rx.color(color, 9), size=16),  # type: ignore
+        rx.text(title, class_name="font-medium text-slate-11 text-sm"),
+        rx.text(description, class_name="text-slate-10 text-xs"),
+        class_name="relative align-top flex flex-col gap-2 border-slate-4 bg-slate-1 hover:bg-slate-3 shadow-sm px-3 pt-3 pb-4 border rounded-2xl text-[15px] text-start transition-colors cursor-pointer",
+        on_click=[ChatState.set_prompt(description), ChatState.generate],
+    )
+
+
+def hints() -> rx.Component:
+    return rx.box(
+        rx.box(rx.heading("Hi, I am ", rx.code(AgentState.agent.name), size="7")),
+        rx.box(
+            template_card(
+                "message-circle",
+                "Ask a question",
+                "What is the capital of France?",
+                "grass",
+            ),
+            template_card(
+                "calculator",
+                "Solve a math problem",
+                "What is the square root of 144?",
+                "tomato",
+            ),
+            template_card(
+                "globe",
+                "Get a fun fact",
+                "Tell me an interesting fact about dolphins.",
+                "blue",
+            ),
+            template_card(
+                "book",
+                "Recommend a book",
+                "What's a good mystery novel for beginners?",
+                "amber",
+            ),
+            class_name="gap-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 w-full",
+        ),
+        class_name="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col justify-center items-center gap-10 w-full max-w-4xl",
+        style={
+            "animation": "reveal 0.35s ease-out",
+            "@keyframes reveal": {"0%": {"opacity": "0"}, "100%": {"opacity": "1"}},
+        },
+        display=rx.cond(ChatState.message_list, "none", "flex"),
+    )
