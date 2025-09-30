@@ -58,7 +58,7 @@ def render_message(message: Message) -> rx.Component:
             rx.box(
                 rx.image(
                     # src="https://avatar.iran.liara.run/username?username=nihao",
-                    src="",
+                    src="/doubao-color.svg",
                     class_name="h-16"
                     + str(rx.cond(ChatState.processing, " animate-pulse", "")),
                 ),
@@ -67,9 +67,8 @@ def render_message(message: Message) -> rx.Component:
                 rx.markdown(
                     f"Tool call: `{message.tool_name}`",
                     class_name="[&>p]:!my-2.5",
-                    on_click=[],
                 ),
-                class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start  hover:bg-slate-2 cursor-pointer",
+                class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
                 on_click=ChatState.get_event(message.event_id),
             ),
             class_name="flex flex-row gap-6",
@@ -91,9 +90,9 @@ def render_message(message: Message) -> rx.Component:
                 rx.markdown(
                     f"Tool call: `{message.tool_name}` done",
                     class_name="[&>p]:!my-2.5",
-                    on_click=ChatState.get_event(message.event_id),
                 ),
-                class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start",
+                class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
+                on_click=ChatState.get_event(message.event_id),
             ),
             class_name="flex flex-row gap-6",
         ),

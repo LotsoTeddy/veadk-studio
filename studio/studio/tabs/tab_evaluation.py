@@ -3,7 +3,7 @@ from studio.components.eval_case_dialog import eval_case_dialog
 from studio.state import ChatState
 
 
-def _evaluation_unit(input: str, output: str) -> rx.Component:
+def _evaluation_unit(id: str, input: str, output: str) -> rx.Component:
     return rx.card(
         rx.data_list.root(
             rx.data_list.item(
@@ -45,13 +45,14 @@ def _evaluation_unit(input: str, output: str) -> rx.Component:
         #     align="start",
         #     class_name="flex-1 min-w-0 overflow-x-hidden",
         # ),
+        id=id,
         class_name="w-full flex-1 min-w-0 hover:bg-slate-3 cursor-pointer",
     )
 
 
-def evaluation_unit(input: str, output: str) -> rx.Component:
+def evaluation_unit(id: str, input: str, output: str) -> rx.Component:
     return rx.dialog.root(
-        rx.dialog.trigger(_evaluation_unit(input, output)),
+        rx.dialog.trigger(_evaluation_unit(id, input, output)),
         eval_case_dialog(),
         class_name="max-h-1/2 max-w-1/2 min-h-0",
     )
@@ -70,13 +71,15 @@ def tab_evaluation() -> rx.Component:
             rx.foreach(
                 ChatState.eval_cases,
                 lambda eval_case: evaluation_unit(
-                    eval_case.input,
-                    eval_case.output,
+                    id=eval_case.invocation_id,
+                    input=eval_case.user_content.parts[0].text,
+                    output=eval_case.final_response.parts[0].text,
                 ),
             ),
             evaluation_unit(
-                "你好",
-                "我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是",
+                id="123",
+                input="你好",
+                output="我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是",
             ),
             spacing="2",
             class_name="w-full min-w-0 box-border",

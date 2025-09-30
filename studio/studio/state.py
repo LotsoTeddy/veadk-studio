@@ -1,14 +1,20 @@
+import time
 import uuid
 from pathlib import Path
 
 import reflex as rx
 from google.adk.agents import Agent
+from google.adk.cli.utils import evals
 from google.adk.cli.utils.agent_loader import AgentLoader
+from google.adk.evaluation.eval_case import EvalCase as ADKEvalCase
+from google.adk.evaluation.eval_case import Invocation, SessionInput
+from google.adk.evaluation.eval_set import EvalSet as ADKEvalSet
 from google.adk.events import Event
 from google.genai.types import Content, Part
 from veadk import Runner
 from veadk.evaluation.deepeval_evaluator.deepeval_evaluator import DeepevalEvaluator
 from veadk.utils.logger import get_logger
+from veadk.utils.misc import formatted_timestamp
 
 from studio.types import EvalCase, Message
 
@@ -84,8 +90,14 @@ class ChatState(rx.State):
     message_list: list[Message]
     """History message list in current session"""
 
-    eval_cases: list[EvalCase] = []
-    """The conversations will be stored to evaluation cases after model generation"""
+    eval_cases: list[Invocation] = []
+    """Inovcations of the Google ADK Evalcase.
+    
+    Structure:
+    - ADKEvalset
+        - eval_cases: list[ADKEvalcase]
+            - conversation: list[Invocation] --> eval_cases here
+    """
 
     # chat services
     @rx.event
@@ -117,7 +129,6 @@ class ChatState(rx.State):
         self.processing = True
         yield
 
-        final_response = ""
         async for event in runner.run_async(  # type: ignore
             user_id=self.user_id,
             session_id=self.session_id,
@@ -128,20 +139,36 @@ class ChatState(rx.State):
                 self.message_list.append(message)
                 yield
 
-        self.processing = False
-
-        self.add_eval_case(input=self.prompt, output=final_response)
+        await self.update_eval_case()
 
         self.prompt = ""
 
+        self.processing = False
+
     # evaluation services
-    def add_eval_case(self, input: str, output: str, tools: list = []):
-        self.eval_cases.append(EvalCase(input=input, output=output, tools=tools))
+    async def update_eval_case(self):
+        if runner and runner.short_term_memory:
+            session_service = runner.short_term_memory.session_service
+
+            session = await session_service.get_session(
+                app_name=self.app_name, user_id=self.user_id, session_id=self.session_id
+            )
+
+            if not session:
+                logger.error("Session not found, update eval case failed.")
+                return
+
+            # Convert the session data to eval invocations
+            self.eval_cases = evals.convert_session_to_eval_invocations(session)
 
     @rx.event
-    def evaluate_eval_case(self, input: str, output: str):
-        evaluator = DeepevalEvaluator(agent=self.agent)
-        # evaluator.evaluate()
+    def evaluate_eval_case(self):
+        # evaluator = DeepevalEvaluator(agent=self.agent)
+        # eval_set = ADKEvalSet(
+        #     eval_set_id=formatted_timestamp(), eval_cases=self.eval_cases
+        # )
+        # evaluator.evaluate(eval_set=eval_set)
+        pass
 
     # session services
     @rx.event
