@@ -340,3 +340,16 @@ class PageState(rx.State):
     @rx.event
     def close_deploy_dialog(self):
         self.deploy_dialog_flag = False
+
+
+class DeployState(rx.State):
+    vefaas_application_name: str
+    vefaas_apig_instance_name: str
+
+    @rx.var
+    def user_project_path(self) -> str:
+        return str(Path.cwd())
+
+    @rx.event
+    def upload_to_vefaas(self):
+        pass

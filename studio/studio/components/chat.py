@@ -23,9 +23,10 @@ def render_message(message: Message) -> rx.Component:
                 rx.image(
                     # src="https://avatar.iran.liara.run/username?username=nihao",
                     src="/doubao-color.svg",
-                    class_name="h-16"
+                    class_name="h-8 w-8"
                     + str(rx.cond(ChatState.processing, " animate-pulse", "")),
                 ),
+                class_name="flex items-center",
             ),
             rx.box(
                 rx.markdown(
@@ -46,11 +47,11 @@ def render_message(message: Message) -> rx.Component:
                     class_name="-bottom-9 left-3 absolute opacity-0 group-hover:opacity-100 transition-opacity",
                 ),
                 class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
+                on_click=ChatState.get_event(message.event_id),
             ),
             class_name="flex flex-row gap-6",
         ),
         class_name="flex flex-col gap-8 pb-10 group",
-        on_click=ChatState.get_event(message.event_id),
     )
 
     tool_call_message_ui = rx.box(
@@ -59,9 +60,10 @@ def render_message(message: Message) -> rx.Component:
                 rx.image(
                     # src="https://avatar.iran.liara.run/username?username=nihao",
                     src="/doubao-color.svg",
-                    class_name="h-16"
+                    class_name="h-8 w-8"
                     + str(rx.cond(ChatState.processing, " animate-pulse", "")),
                 ),
+                class_name="flex items-center",
             ),
             rx.box(
                 rx.markdown(
@@ -81,10 +83,11 @@ def render_message(message: Message) -> rx.Component:
             rx.box(
                 rx.image(
                     # src="https://avatar.iran.liara.run/username?username=nihao",
-                    src="",
-                    class_name="h-16"
+                    src="/doubao-color.svg",
+                    class_name="h-8 w-8"
                     + str(rx.cond(ChatState.processing, " animate-pulse", "")),
                 ),
+                class_name="flex items-center",
             ),
             rx.box(
                 rx.markdown(

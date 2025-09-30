@@ -1,6 +1,7 @@
 import reflex as rx
 
 from studio.pages.agent_page import agent_page
+from studio.pages.build_page import build_page
 from studio.state import AgentState, ChatState, PageState
 
 
@@ -50,7 +51,9 @@ app = rx.App(
     style={"font_family": "var(--font-family)"},
 )
 
-app.add_page(index)
+app.add_page(index, title="VeADK Studio - Volcengine Agent Development Kit")
+
+app.add_page(build_page, route="/build")
 
 app.add_page(
     agent_page,
