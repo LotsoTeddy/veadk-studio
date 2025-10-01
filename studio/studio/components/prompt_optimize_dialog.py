@@ -33,6 +33,7 @@ def prompt_optimize_dialog() -> rx.Component:
                             class_name="h-[10%] w-full items-end justify-end",
                         ),
                         class_name="h-full flex flex-col min-h-0",
+                        on_submit=AgentState.update_system_prompt,
                     ),
                     class_name="w-1/3 h-full flex flex-col gap-4 min-h-0 shadow-sm p-4",
                 ),
@@ -45,7 +46,7 @@ def prompt_optimize_dialog() -> rx.Component:
                             ),
                             rx.text_area(
                                 default_value=AgentState.optimize_feedback,
-                                name="instruction",
+                                name="feedback",
                                 class_name=(
                                     "w-full h-full min-h-0 resize-none overflow-y-auto "
                                     "rounded-lg bg-gray-50 ring-1 ring-gray-200 p-3"
@@ -57,6 +58,7 @@ def prompt_optimize_dialog() -> rx.Component:
                             rx.button("Optimize", type="submit"),
                             class_name="h-[10%] w-full items-end justify-end",
                         ),
+                        on_submit=AgentState.optimize_system_prompt,
                         class_name="h-full flex flex-col min-h-0",
                     ),
                     class_name="w-1/3 h-full flex flex-col gap-4 min-h-0 shadow-sm p-4",
@@ -69,7 +71,7 @@ def prompt_optimize_dialog() -> rx.Component:
                             ),
                             rx.text_area(
                                 default_value=AgentState.optimized_prompt,
-                                name="instruction",
+                                name="optimized_prompt",
                                 class_name=(
                                     "w-full h-full min-h-0 resize-none overflow-y-auto "
                                     "rounded-lg bg-gray-50 ring-1 ring-gray-200 p-3"
@@ -81,6 +83,7 @@ def prompt_optimize_dialog() -> rx.Component:
                             rx.button("Update", type="submit"),
                             class_name="h-[10%] w-full items-end justify-end",
                         ),
+                        on_submit=AgentState.replace_system_prompt,
                         class_name="h-full flex flex-col min-h-0",
                     ),
                     class_name="w-1/3 h-full flex flex-col gap-4 min-h-0 shadow-sm p-4",

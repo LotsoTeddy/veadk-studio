@@ -1,5 +1,5 @@
 import reflex as rx
-from studio.state import ChatState, PageState
+from studio.state import AgentState, ChatState, PageState
 
 
 def eval_case_dialog() -> rx.Component:
@@ -63,7 +63,13 @@ def eval_case_dialog() -> rx.Component:
                         class_name="h-[90%] w-full flex flex-col gap-2 min-h-0",
                     ),
                     rx.flex(
-                        rx.button("Evaluate", class_name="ml-auto"),
+                        rx.button(
+                            "Evaluate",
+                            class_name="ml-auto",
+                            on_click=lambda: ChatState.evaluate_eval_case(
+                                AgentState.agent
+                            ),
+                        ),
                         class_name="h-[10%] w-full items-end justify-end",
                     ),
                     class_name="w-full h-full flex flex-col gap-4 min-h-0 justify-between ",

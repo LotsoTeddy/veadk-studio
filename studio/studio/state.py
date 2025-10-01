@@ -4,6 +4,8 @@ import uuid
 from pathlib import Path
 
 import reflex as rx
+from deepeval.metrics import GEval, ToolCorrectnessMetric
+from deepeval.test_case import LLMTestCaseParams
 from google.adk.agents import Agent
 from google.adk.cli.utils import evals
 from google.adk.cli.utils.agent_loader import AgentLoader
@@ -39,6 +41,8 @@ class AgentState(rx.State):
 
     optimized_prompt: str = ""
 
+    is_optimizing: bool = False
+
     @rx.var
     def list_agents(self) -> list[str]:
         """List agent from current work directory"""
@@ -69,11 +73,22 @@ class AgentState(rx.State):
         return rx.redirect("/agent")
 
     @rx.event
-    def update_system_prompt(self, prompt: str):
-        self.agent.instruction = prompt
+    def update_system_prompt(self, data: dict):
+        """Update current system prompt to user's input"""
+        logger.debug("Update agent system prompt.")
+        self.agent.instruction = data["instruction"]
+        self.system_prompt = data["instruction"]
 
     @rx.event
-    def optimize_system_prompt(self, feedback: str):
+    def replace_system_prompt(self, data: dict):
+        """Replace current system prompt to optimized prompt"""
+        optimized_prompt = data["optimized_prompt"]
+        self.system_prompt = optimized_prompt
+        self.agent.instruction = optimized_prompt
+        self.optimized_prompt = ""
+
+    @rx.event
+    def optimize_system_prompt(self, data: dict):
         from veadk.integrations.ve_prompt_pilot.ve_prompt_pilot import VePromptPilot
 
         prompt_pilot_client = VePromptPilot(
@@ -81,9 +96,16 @@ class AgentState(rx.State):
             workspace_id=os.getenv("PROMPT_PILOT_WORKSPACE_ID", ""),
         )
 
-        # optimized_prompt = prompt_pilot_client.optimize(
-        #     agents=[self.agent], feedback=feedback
-        # )
+        self.is_optimizing = True
+
+        self.optimized_prompt = prompt_pilot_client.optimize(
+            agents=[self.agent],  # type: ignore
+            feedback=data["feedback"],
+        )
+
+        self.feedback = ""
+
+        self.is_optimizing = False
 
 
 class ChatState(rx.State):
@@ -202,15 +224,39 @@ class ChatState(rx.State):
                 break
 
     @rx.event
-    def evaluate_eval_case(
-        self, judge_model_name: str = "", judge_model_prompt: str = ""
-    ):
-        # evaluator = DeepevalEvaluator(agent=self.agent)
-        # eval_set = ADKEvalSet(
-        #     eval_set_id=formatted_timestamp(), eval_cases=self.eval_cases
-        # )
-        # evaluator.evaluate(eval_set=eval_set)
-        pass
+    async def evaluate_eval_case(self, agent):
+        invocation = self.selected_eval_case
+        _eval_case = ADKEvalCase(
+            eval_id=f"eval_{formatted_timestamp()}",
+            conversation=[invocation],
+            creation_timestamp=0.0,
+        )
+        _eval_set = ADKEvalSet(
+            eval_set_id=f"eval_{formatted_timestamp()}",
+            eval_cases=[_eval_case],
+            creation_timestamp=0.0,
+        )
+
+        evaluator = DeepevalEvaluator(agent=agent)
+
+        metrics = [
+            GEval(
+                threshold=0.8,
+                name="Base Evaluation",
+                criteria=self.judge_model_prompt,
+                evaluation_params=[
+                    LLMTestCaseParams.INPUT,
+                    LLMTestCaseParams.ACTUAL_OUTPUT,
+                    LLMTestCaseParams.EXPECTED_OUTPUT,
+                ],
+                model=evaluator.judge_model,
+            ),
+            ToolCorrectnessMetric(threshold=0.5),
+        ]
+
+        await evaluator.evaluate(metrics=metrics, eval_set=_eval_set)
+        self.evaluation_score = str(evaluator.result_list[0].average_score)
+        self.evaluation_reason = evaluator.result_list[0].total_reason
 
     # session services
     @rx.event
