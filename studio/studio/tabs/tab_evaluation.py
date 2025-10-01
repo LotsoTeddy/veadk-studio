@@ -52,7 +52,10 @@ def _evaluation_unit(id: str, input: str, output: str) -> rx.Component:
 
 def evaluation_unit(id: str, input: str, output: str) -> rx.Component:
     return rx.dialog.root(
-        rx.dialog.trigger(_evaluation_unit(id, input, output)),
+        rx.dialog.trigger(
+            _evaluation_unit(id, input, output),
+            on_click=lambda: ChatState.set_current_eval_case(id),
+        ),
         eval_case_dialog(),
         class_name="max-h-1/2 max-w-1/2 min-h-0",
     )
@@ -75,11 +78,6 @@ def tab_evaluation() -> rx.Component:
                     input=eval_case.user_content.parts[0].text,
                     output=eval_case.final_response.parts[0].text,
                 ),
-            ),
-            evaluation_unit(
-                id="123",
-                input="你好",
-                output="我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是我是",
             ),
             spacing="2",
             class_name="w-full min-w-0 box-border",

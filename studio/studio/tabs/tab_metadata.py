@@ -20,7 +20,6 @@ def tab_metadata() -> rx.Component:
             rx.data_list.item(
                 rx.data_list.label(
                     "System prompt",
-                    prompt_optimize_dialog(),
                     rx.badge(
                         "Optimize",
                         class_name="ml-2 cursor-pointer",

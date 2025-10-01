@@ -1,5 +1,6 @@
 import reflex as rx
-from studio.state import PageState
+from studio.state import ChatState, PageState
+
 
 def eval_case_dialog() -> rx.Component:
     return rx.dialog.content(
@@ -12,13 +13,13 @@ def eval_case_dialog() -> rx.Component:
         rx.hstack(
             # left panel
             rx.card(
-                rx.text("Test Case", class_name="text-lg font-semibold mb-3"),
+                rx.text("Test Case", class_name="text-lg font-semibold mb-2"),
                 rx.vstack(
                     rx.vstack(
                         rx.heading("Input", size="3"),
-                        rx.box(
+                        rx.scroll_area(
                             rx.text(
-                                "I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output v I am output I am output I am output I am output v I am output I am output I am output I am output I am output I am output I am output I am outputvI am output I am output I am output I am output "
+                                ChatState.selected_eval_case.user_content.parts[0].text
                             ),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
@@ -27,8 +28,10 @@ def eval_case_dialog() -> rx.Component:
                     rx.vstack(
                         rx.heading("Output", size="3"),
                         rx.box(
-                            rx.text(
-                                "I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output v I am output I am output I am output I am output v I am output I am output I am output I am output I am output I am output I am output I am outputvI am output I am output I am output I am output "
+                            rx.scroll_area(
+                                ChatState.selected_eval_case.final_response.parts[
+                                    0
+                                ].text
                             ),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
@@ -40,17 +43,21 @@ def eval_case_dialog() -> rx.Component:
             ),
             # medium panel
             rx.card(
-                rx.text(
-                    "Judge Model Config",
-                    class_name="text-lg font-semibold mb-3"
+                rx.hstack(
+                    rx.text("Judge Model", class_name="text-lg font-semibold"),
+                    rx.badge(
+                        ChatState.judge_model_name,
+                        color_scheme="blue",
+                        variant="soft",
+                        class_name="text-sm font-semibold rounded-full",
+                    ),
+                    class_name="items-center mb-2",
                 ),
                 rx.vstack(
                     rx.vstack(
                         rx.heading("Judge Prompt", size="3"),
                         rx.box(
-                            rx.text(
-                                "I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output v I am output I am output I am output I am output v I am output I am output I am output I am output I am output I am output I am output I am outputvI am output I am output I am output I am output am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output v I am output I am output I am output I am output v I am output I am output I am output I am output I am output I am output I am output I am outputvI am output I am output I am output I am output "
-                            ),
+                            rx.scroll_area(ChatState.judge_model_prompt),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
                         class_name="h-[90%] w-full flex flex-col gap-2 min-h-0",
@@ -63,37 +70,33 @@ def eval_case_dialog() -> rx.Component:
                 ),
                 class_name="w-1/3 h-full flex flex-col gap-4 min-h-0 shadow-sm p-4",
             ),
-        
             # right panel
             rx.card(
                 rx.hstack(
-                    rx.text(
-                        "Test Result",
-                        class_name="text-lg font-semibold"
-                    ),
+                    rx.text("Test Result", class_name="text-lg font-semibold"),
                     rx.badge(
-                        "0.8",
+                        ChatState.evaluation_score,
                         color_scheme="green",
                         variant="soft",
-                        class_name="text-sm font-semibold rounded-full"
+                        class_name="text-sm font-semibold rounded-full",
                     ),
-                    class_name="items-center mb-3"
+                    class_name="items-center mb-2",
                 ),
                 rx.vstack(
                     rx.vstack(
                         rx.heading("Reason", size="3"),
                         rx.box(
-                            rx.text(
-                                "I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output v I am output I am output I am output I am output v I am output I am output I am output I am output I am output I am output I am output I am outputvI am output I am output I am output I am output am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output I am output v I am output I am output I am output I am output v I am output I am output I am output I am output I am output I am output I am output I am outputvI am output I am output I am output I am output "
-                            ),
+                            rx.scroll_area(ChatState.evaluation_reason),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
-                        class_name="h-[90%] w-full flex flex-col gap-2 min-h-0 ",
+                        class_name="h-[90%] w-full flex flex-col gap-2 min-h-0",
                     ),
                     rx.flex(
                         rx.button(
-                            "Optimize", 
-                            class_name="ml-auto"),
+                            "Optimize",
+                            class_name="ml-auto",
+                            on_click=PageState.open_prompt_optimize_dialog,
+                        ),
                         class_name="h-[10%] w-full items-end justify-end",
                     ),
                     class_name="w-full h-full flex flex-col gap-4 min-h-0 justify-between ",

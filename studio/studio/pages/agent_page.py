@@ -3,6 +3,7 @@ from studio.components.chat import action_bar, chat
 from studio.components.deploy_dialog import deploy_dialog
 from studio.components.hints import hints
 from studio.components.navbar import navbar
+from studio.components.prompt_optimize_dialog import prompt_optimize_dialog
 from studio.components.settings_dialog import settings_dialog
 from studio.tabs.tab_evaluation import tab_evaluation
 from studio.tabs.tab_event import tab_event
@@ -16,6 +17,7 @@ def agent_page() -> rx.Component:
     return rx.vstack(
         settings_dialog(),
         deploy_dialog(),
+        prompt_optimize_dialog(),
         navbar(),
         rx.stack(
             rx.flex(

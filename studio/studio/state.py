@@ -1,3 +1,4 @@
+import os
 import time
 import uuid
 from pathlib import Path
@@ -32,6 +33,12 @@ class AgentState(rx.State):
     selected_agent: str = ""
     """The current selected agent name"""
 
+    system_prompt: str = ""
+
+    optimize_feedback: str = ""
+
+    optimized_prompt: str = ""
+
     @rx.var
     def list_agents(self) -> list[str]:
         """List agent from current work directory"""
@@ -52,6 +59,7 @@ class AgentState(rx.State):
             f"Only support Agent type, but got {agent.__class__.__name__}"
         )
         self.agent = agent
+        self.system_prompt = str(self.agent.instruction)
 
         # init runner
         global runner
@@ -63,6 +71,19 @@ class AgentState(rx.State):
     @rx.event
     def update_system_prompt(self, prompt: str):
         self.agent.instruction = prompt
+
+    @rx.event
+    def optimize_system_prompt(self, feedback: str):
+        from veadk.integrations.ve_prompt_pilot.ve_prompt_pilot import VePromptPilot
+
+        prompt_pilot_client = VePromptPilot(
+            api_key=os.getenv("PROMPT_PILOT_API_KEY", ""),
+            workspace_id=os.getenv("PROMPT_PILOT_WORKSPACE_ID", ""),
+        )
+
+        # optimized_prompt = prompt_pilot_client.optimize(
+        #     agents=[self.agent], feedback=feedback
+        # )
 
 
 class ChatState(rx.State):
@@ -91,13 +112,24 @@ class ChatState(rx.State):
     """History message list in current session"""
 
     eval_cases: list[Invocation] = []
-    """Inovcations of the Google ADK Evalcase.
+    """Invocations of the Google ADK Evalcase."""
+
+    selected_eval_case: Invocation
+    """Selected invocation
     
     Structure:
     - ADKEvalset
         - eval_cases: list[ADKEvalcase]
             - conversation: list[Invocation] --> eval_cases here
     """
+
+    judge_model_name: str = "doubao-seed-1-6-250615"
+
+    judge_model_prompt: str = "You are a judger for model response."
+
+    evaluation_score: str = ""
+
+    evaluation_reason: str = ""
 
     # chat services
     @rx.event
@@ -162,7 +194,17 @@ class ChatState(rx.State):
             self.eval_cases = evals.convert_session_to_eval_invocations(session)
 
     @rx.event
-    def evaluate_eval_case(self):
+    def set_current_eval_case(self, invocation_id: str):
+        for eval_case in self.eval_cases:
+            if eval_case.invocation_id == invocation_id:
+                self.selected_eval_case = eval_case
+                logger.debug(f"Set current eval case with id {invocation_id}")
+                break
+
+    @rx.event
+    def evaluate_eval_case(
+        self, judge_model_name: str = "", judge_model_prompt: str = ""
+    ):
         # evaluator = DeepevalEvaluator(agent=self.agent)
         # eval_set = ADKEvalSet(
         #     eval_set_id=formatted_timestamp(), eval_cases=self.eval_cases
