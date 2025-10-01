@@ -101,7 +101,12 @@ def eval_case_dialog() -> rx.Component:
                         rx.button(
                             "Optimize",
                             class_name="ml-auto",
-                            on_click=PageState.open_prompt_optimize_dialog,
+                            on_click=[
+                                lambda: AgentState.set_feedback(
+                                    ChatState.evaluation_reason
+                                ),
+                                PageState.open_prompt_optimize_dialog,
+                            ],
                         ),
                         class_name="h-[10%] w-full items-end justify-end",
                     ),

@@ -5,6 +5,7 @@ from studio.components.hints import hints
 from studio.components.navbar import navbar
 from studio.components.prompt_optimize_dialog import prompt_optimize_dialog
 from studio.components.settings_dialog import settings_dialog
+from studio.state import ChatState
 from studio.tabs.tab_evaluation import tab_evaluation
 from studio.tabs.tab_event import tab_event
 from studio.tabs.tab_knowledgebase import tab_knowledgebase

@@ -1,8 +1,12 @@
+import os
+
 import reflex as rx
+import requests
 
 from studio.pages.agent_page import agent_page
 from studio.pages.build_page import build_page
-from studio.state import AgentState, ChatState, PageState
+from studio.pages.login_page import login_page
+from studio.state import AgentState, AuthState, ChatState, PageState
 
 
 def select_agents() -> rx.Component:
@@ -22,6 +26,15 @@ def index() -> rx.Component:
             rx.text(
                 "Build, debug, and optimize your agent, all in one",
                 size="5",
+            ),
+            rx.cond(
+                AuthState.user_name,
+                rx.text(
+                    "Current user: ",
+                    rx.code(AuthState.user_name),
+                    size="5",
+                    on_mount=lambda: ChatState.set_user_id(AuthState.user_name),
+                ),
             ),
             rx.stack(
                 rx.link(
@@ -54,7 +67,11 @@ app = rx.App(
     style={"font_family": "var(--font-family)"},
 )
 
-app.add_page(index, title="VeADK Studio - Volcengine Agent Development Kit")
+app.add_page(login_page, title="Login", route="/")
+
+app.add_page(
+    index, title="VeADK Studio - Volcengine Agent Development Kit", route="main"
+)
 
 app.add_page(build_page, route="/build")
 
@@ -62,6 +79,19 @@ app.add_page(
     agent_page,
     route="/agent",
     on_load=[
-        PageState.open_settings_dialog,
+        ChatState.add_session,
     ],
 )
+
+
+@rx.page(route="/auth/callbacks/github")
+def auth_callbacks_github():
+    return rx.flex(
+        rx.text(
+            "Fetching your account information...",
+            on_mount=[AuthState.on_load],
+        ),
+        class_name="flex mx-auto mt-20",
+        align="center",
+        direction="column",
+    )

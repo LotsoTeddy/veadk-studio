@@ -4,6 +4,7 @@ import uuid
 from pathlib import Path
 
 import reflex as rx
+import requests
 from deepeval.metrics import GEval, ToolCorrectnessMetric
 from deepeval.test_case import LLMTestCaseParams
 from google.adk.agents import Agent
@@ -19,6 +20,7 @@ from veadk.evaluation.deepeval_evaluator.deepeval_evaluator import DeepevalEvalu
 from veadk.utils.logger import get_logger
 from veadk.utils.misc import formatted_timestamp
 
+from studio.consts import GITHUB_CLIENT_ID
 from studio.types import EvalCase, Message
 
 logger = get_logger(__name__)
@@ -67,7 +69,9 @@ class AgentState(rx.State):
 
         # init runner
         global runner
-        runner = Runner(agent=self.agent)
+        runner = Runner(agent=self.agent, app_name=agent_name)
+
+        logger.debug(f"Runner init done: {runner}")
 
         # redirect to session page
         return rx.redirect("/agent")
@@ -88,6 +92,10 @@ class AgentState(rx.State):
         self.optimized_prompt = ""
 
     @rx.event
+    def set_feedback(self, feedback):
+        self.optimize_feedback = feedback
+
+    @rx.event
     def optimize_system_prompt(self, data: dict):
         from veadk.integrations.ve_prompt_pilot.ve_prompt_pilot import VePromptPilot
 
@@ -103,7 +111,7 @@ class AgentState(rx.State):
             feedback=data["feedback"],
         )
 
-        self.feedback = ""
+        self.optimize_feedback = ""
 
         self.is_optimizing = False
 
@@ -115,7 +123,7 @@ class ChatState(rx.State):
     user_id: str = f"u_{uuid.uuid4()}"
     """One of Google ADK attributes"""
 
-    session_id: str = f"s_{uuid.uuid4()}"
+    session_id: str
     """One of Google ADK attributes"""
 
     session_ids: list[str] = []
@@ -159,6 +167,10 @@ class ChatState(rx.State):
         self.app_name = app_name
 
     @rx.event
+    def set_user_id(self, user_id: str):
+        self.user_id = user_id
+
+    @rx.event
     def set_prompt(self, prompt: str):
         self.prompt = prompt
         self.message_list.append(Message(role="user", content=self.prompt))
@@ -183,17 +195,25 @@ class ChatState(rx.State):
         self.processing = True
         yield
 
-        async for event in runner.run_async(  # type: ignore
-            user_id=self.user_id,
-            session_id=self.session_id,
-            new_message=new_message,
-        ):
-            message = self._event_to_message(event)
-            if message:
-                self.message_list.append(message)
-                yield
+        logger.debug(
+            f"Begin generate, app_name: {self.app_name}, user_id: {self.user_id}, session_id: {self.session_id}"
+        )
 
-        await self.update_eval_case()
+        try:
+            async for event in runner.run_async(  # type: ignore
+                user_id=self.user_id,
+                session_id=self.session_id,
+                new_message=new_message,
+            ):
+                message = self._event_to_message(event)
+                if message:
+                    self.message_list.append(message)
+                    yield
+
+            await self.update_eval_case()
+        except Exception as e:
+            message = Message(role="assistant", content=str(e))
+            yield
 
         self.prompt = ""
 
@@ -214,6 +234,7 @@ class ChatState(rx.State):
 
             # Convert the session data to eval invocations
             self.eval_cases = evals.convert_session_to_eval_invocations(session)
+            logger.debug(f"Eval cases: {self.eval_cases}")
 
     @rx.event
     def set_current_eval_case(self, invocation_id: str):
@@ -308,14 +329,23 @@ class ChatState(rx.State):
     async def add_session(self):
         session_id = f"s_{uuid.uuid4()}"
 
+        if session_id in self.session_ids:
+            logger.error("Session id has been in your history session.")
+            return
+
+        logger.debug(f"Runner: {runner}")
         if runner and runner.short_term_memory:
             await runner.short_term_memory.create_session(
                 app_name=self.app_name,
                 user_id=self.user_id,
                 session_id=session_id,
             )
+            logger.debug(f"Create session with id {session_id}")
             self.session_ids.append(session_id)
             self.session_id = session_id
+
+            # refresh history messages
+            await self.load_session(session_id)
 
     @rx.event
     async def load_sessions(self):
@@ -355,6 +385,8 @@ class ChatState(rx.State):
                 logger.warning("No history events found in session.")
 
     def _event_to_message(self, event: Event) -> Message | None:
+        if event.author == "user":
+            return Message(role="user", content=event.content.parts[0].text)  # type: ignore
         if event.get_function_calls():
             for function_call in event.get_function_calls():
                 logger.debug(f"Function call: {function_call}")
@@ -441,3 +473,48 @@ class DeployState(rx.State):
     @rx.event
     def upload_to_vefaas(self):
         pass
+
+
+class AuthState(rx.State):
+    user_name: str
+
+    user_avatar_url: str
+
+    @rx.event
+    def on_load(self):
+        code = self.router_data["query"]["code"]
+        if code and not self.user_name:
+            # Step 1: code -> token
+            token_resp = requests.post(
+                "https://github.com/login/oauth/access_token",
+                headers={"Accept": "application/json"},
+                data={
+                    "client_id": GITHUB_CLIENT_ID,
+                    "client_secret": os.getenv("GITHUB_CLIENT_SECRET"),
+                    "code": code,
+                },
+            )
+            token_data = token_resp.json()
+            access_token = token_data.get("access_token")
+
+            # Step 2: token -> user information
+            user_resp = requests.get(
+                "https://api.github.com/user",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "Accept": "application/json",
+                },
+            )
+            user_data = user_resp.json()
+
+            logger.debug(f"Github user_data response: {user_data}")
+
+            if "login" in user_data:
+                self.user_name = user_data.get("login")
+                self.user_avatar_url = user_data.get("avatar_url")
+
+                logger.debug(f"GitHub user: {self.user_name}")
+            else:
+                logger.error("Error get user information.")
+
+            return rx.redirect("/main")

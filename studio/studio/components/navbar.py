@@ -45,7 +45,7 @@ def navbar() -> rx.Component:
                         "plus",
                         on_click=[
                             lambda: ChatState.add_session,
-                            lambda: ChatState.load_session(ChatState.session_id),
+                            # lambda: ChatState.load_session(ChatState.session_id),
                         ],
                     ),
                     navbar_icon_button(

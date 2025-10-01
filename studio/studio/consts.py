@@ -1,0 +1,1 @@
+GITHUB_CLIENT_ID = "Ov23limxk7aXoUAmBj8z"

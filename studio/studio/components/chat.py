@@ -1,7 +1,7 @@
 import reflex as rx
 
 # from frontend.components.badge import made_with_reflex
-from studio.state import ChatState
+from studio.state import AuthState, ChatState
 from studio.types import Message
 
 
@@ -14,7 +14,14 @@ def render_message(message: Message) -> rx.Component:
             ),
             class_name="relative bg-slate-3 px-5 rounded-3xl max-w-[70%] text-slate-12 self-end",
         ),
-        class_name="flex flex-col gap-8 pb-10 group",
+        rx.cond(
+            AuthState.user_avatar_url,
+            rx.box(
+                rx.image(src=AuthState.user_avatar_url, class_name="h-8 w-8"),
+                class_name="flex items-center",
+            ),
+        ),
+        class_name="flex flex-row gap-8 pb-10 group justify-end",
     )
 
     assistant_message_ui = rx.box(

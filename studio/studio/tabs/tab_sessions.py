@@ -22,7 +22,8 @@ def session_unit(session_id: str, timestamp: str) -> rx.Component:
             align="start",
         ),
         width="100%",
-        class_name="hover:bg-slate-3 cursor-pointer",
+        class_name="hover:bg-slate-3 cursor-pointer"
+        + rx.cond(session_id == ChatState.session_id, "bg-slate-10", ""),
         id=session_id,
         on_click=lambda: ChatState.load_session(session_id),
     )
