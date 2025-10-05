@@ -1,27 +1,32 @@
+import asyncio
 import os
-import time
 import uuid
+from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 import reflex as rx
 import requests
 from deepeval.metrics import GEval, ToolCorrectnessMetric
 from deepeval.test_case import LLMTestCaseParams
-from google.adk.agents import Agent
 from google.adk.cli.utils import evals
 from google.adk.cli.utils.agent_loader import AgentLoader
 from google.adk.evaluation.eval_case import EvalCase as ADKEvalCase
-from google.adk.evaluation.eval_case import Invocation, SessionInput
+from google.adk.evaluation.eval_case import Invocation
 from google.adk.evaluation.eval_set import EvalSet as ADKEvalSet
 from google.adk.events import Event
+from google.adk.sessions import Session
+from google.adk.tools.base_tool import BaseTool
+from google.adk.tools.base_toolset import BaseToolset
 from google.genai.types import Content, Part
 from veadk import Runner
+from veadk.agent import Agent
 from veadk.evaluation.deepeval_evaluator.deepeval_evaluator import DeepevalEvaluator
 from veadk.utils.logger import get_logger
 from veadk.utils.misc import formatted_timestamp
 
 from studio.consts import GITHUB_CLIENT_ID
-from studio.types import EvalCase, Message
+from studio.types import Message
 
 logger = get_logger(__name__)
 
@@ -34,10 +39,18 @@ class AgentState(rx.State):
     agent: Agent
     """Global agent instance"""
 
-    selected_agent: str = ""
+    selected_agent: str
     """The current selected agent name"""
 
-    system_prompt: str = ""
+    tools: list[str]
+
+    knowledgebase_backend: str
+
+    short_term_memory_backend: str
+
+    long_term_memory_backend: str
+
+    system_prompt: str
 
     optimize_feedback: str = ""
 
@@ -51,7 +64,7 @@ class AgentState(rx.State):
         return agent_loader.list_agents()
 
     @rx.event
-    def set_agent(self, agent_name: str):
+    async def set_agent(self, agent_name: str):
         """Set the user-selected agent and init a runner.
 
         Args:
@@ -65,13 +78,14 @@ class AgentState(rx.State):
             f"Only support Agent type, but got {agent.__class__.__name__}"
         )
         self.agent = agent
-        self.system_prompt = str(self.agent.instruction)
 
         # init runner
         global runner
         runner = Runner(agent=self.agent, app_name=agent_name)
 
         logger.debug(f"Runner init done: {runner}")
+
+        await self._set_agent_metadata()
 
         # redirect to session page
         return rx.redirect("/agent")
@@ -115,21 +129,60 @@ class AgentState(rx.State):
 
         self.is_optimizing = False
 
+    async def _set_agent_metadata(self):
+        self.system_prompt = str(self.agent.instruction)
+
+        if self.agent.knowledgebase and isinstance(
+            self.agent.knowledgebase.backend, str
+        ):
+            self.knowledgebase_backend = self.agent.knowledgebase.backend
+        else:
+            self.knowledgebase_backend = ""
+
+        if self.agent.short_term_memory:
+            self.short_term_memory_backend = self.agent.short_term_memory.backend
+        else:
+            self.short_term_memory_backend = ""
+
+        if self.agent.long_term_memory and isinstance(
+            self.agent.long_term_memory.backend, str
+        ):
+            self.long_term_memory_backend = self.agent.long_term_memory.backend
+        else:
+            self.long_term_memory_backend = ""
+
+        if self.agent.tools:
+            for tool in self.agent.tools:
+                if isinstance(tool, Callable):
+                    self.tools.append(tool.__name__)
+                elif isinstance(tool, BaseTool):
+                    self.tools.append(tool.name)
+                elif isinstance(tool, BaseToolset):
+                    sub_tools = await tool.get_tools()
+                    self.tools.extend([tool.name for tool in sub_tools])
+                else:
+                    logger.error("Invalid tool type.")
+        else:
+            self.tools = []
+
 
 class ChatState(rx.State):
     app_name: str = "veadk_studio"
     """One of Google ADK attributes"""
 
-    user_id: str = f"u_{uuid.uuid4()}"
+    user_id: str = "user_" + str(uuid.uuid4()).split("-")[0]
     """One of Google ADK attributes"""
 
     session_id: str
     """One of Google ADK attributes"""
 
-    session_ids: list[str] = []
-    """Maintain a list of session ids for rendering in the session tab"""
+    session: Session
+    """Current activated session."""
 
-    selected_event_content: str = ""
+    sessions: list[Session] = []
+    """Maintain sessions for rendering in the session tab"""
+
+    selected_event_content: str = "No event selected."
     """The currently selected event content"""
 
     prompt: str
@@ -142,16 +195,16 @@ class ChatState(rx.State):
     """History message list in current session"""
 
     eval_cases: list[Invocation] = []
-    """Invocations of the Google ADK Evalcase."""
-
-    selected_eval_case: Invocation
-    """Selected invocation
+    """Invocations of the Google ADK Evalcase.
     
     Structure:
     - ADKEvalset
         - eval_cases: list[ADKEvalcase]
             - conversation: list[Invocation] --> eval_cases here
     """
+
+    eval_cases_map: dict[str, Invocation] = {}
+    """Map from invocation id to invocation"""
 
     judge_model_name: str = "doubao-seed-1-6-250615"
 
@@ -160,20 +213,6 @@ class ChatState(rx.State):
     evaluation_score: str = ""
 
     evaluation_reason: str = ""
-
-    # chat services
-    @rx.event
-    def set_app_name(self, app_name: str):
-        self.app_name = app_name
-
-    @rx.event
-    def set_user_id(self, user_id: str):
-        self.user_id = user_id
-
-    @rx.event
-    def set_prompt(self, prompt: str):
-        self.prompt = prompt
-        self.message_list.append(Message(role="user", content=self.prompt))
 
     @rx.event
     async def generate(self):
@@ -190,10 +229,15 @@ class ChatState(rx.State):
               - Text
               - Image
         """
-        new_message = Content(parts=[Part(text=self.prompt)], role="user")
-
         self.processing = True
         yield
+
+        self.message_list.append(Message(role="user", content=self.prompt))
+        new_message = Content(parts=[Part(text=self.prompt)], role="user")
+
+        global runner
+        runner.app_name = self.app_name  # type: ignore
+        runner.user_id = self.user_id  # type: ignore
 
         logger.debug(
             f"Begin generate, app_name: {self.app_name}, user_id: {self.user_id}, session_id: {self.session_id}"
@@ -219,46 +263,48 @@ class ChatState(rx.State):
 
         self.processing = False
 
+        logger.debug("Generate done.")
+
     # evaluation services
     async def update_eval_case(self):
-        if runner and runner.short_term_memory:
-            session_service = runner.short_term_memory.session_service
+        session = await self._get_session()
+        logger.debug(f"Update eval case with session id {session.id}")
 
-            session = await session_service.get_session(
-                app_name=self.app_name, user_id=self.user_id, session_id=self.session_id
-            )
+        self.eval_cases = evals.convert_session_to_eval_invocations(session)
 
-            if not session:
-                logger.error("Session not found, update eval case failed.")
-                return
-
-            # Convert the session data to eval invocations
-            self.eval_cases = evals.convert_session_to_eval_invocations(session)
-            logger.debug(f"Eval cases: {self.eval_cases}")
+        self.eval_cases_map = {
+            eval_case.invocation_id: eval_case for eval_case in self.eval_cases
+        }
 
     @rx.event
-    def set_current_eval_case(self, invocation_id: str):
-        for eval_case in self.eval_cases:
-            if eval_case.invocation_id == invocation_id:
-                self.selected_eval_case = eval_case
-                logger.debug(f"Set current eval case with id {invocation_id}")
-                break
+    async def evaluate(self, eval_case_id: str, agent):
+        logger.debug("Start to evaluate.")
 
-    @rx.event
-    async def evaluate_eval_case(self, agent):
-        invocation = self.selected_eval_case
+        invocation = self.eval_cases_map.get(eval_case_id)
+        if not invocation:
+            logger.error(f"Get eval case failed (eval_case_id={eval_case_id})")
+
+        logger.debug("Start to prepare evaluation set.")
+
         _eval_case = ADKEvalCase(
             eval_id=f"eval_{formatted_timestamp()}",
-            conversation=[invocation],
+            conversation=[invocation],  # type: ignore
             creation_timestamp=0.0,
         )
+
+        logger.debug("Prepare evaluation case done.")
+
         _eval_set = ADKEvalSet(
             eval_set_id=f"eval_{formatted_timestamp()}",
             eval_cases=[_eval_case],
             creation_timestamp=0.0,
         )
 
+        logger.debug("Prepare evaluation set done.")
+
         evaluator = DeepevalEvaluator(agent=agent)
+
+        logger.debug("Prepare evaluator done.")
 
         metrics = [
             GEval(
@@ -275,32 +321,33 @@ class ChatState(rx.State):
             ToolCorrectnessMetric(threshold=0.5),
         ]
 
-        await evaluator.evaluate(metrics=metrics, eval_set=_eval_set)
+        logger.debug("Prepare metrics done.")
+
+        def run_in_new_loop():
+            return asyncio.run(evaluator.evaluate(metrics=metrics, eval_set=_eval_set))
+
+        import concurrent.futures
+
+        loop = asyncio.get_running_loop()
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            await loop.run_in_executor(pool, run_in_new_loop)
+
+        # await evaluator.evaluate(metrics=metrics, eval_set=_eval_set)
+
         self.evaluation_score = str(evaluator.result_list[0].average_score)
         self.evaluation_reason = evaluator.result_list[0].total_reason
 
     # session services
     @rx.event
     async def get_event(self, event_id: str):
-        if runner and runner.short_term_memory:
-            session_service = runner.short_term_memory.session_service
+        session = await self._get_session()
 
-            logger.info(f"Load session with expected session_id={self.session_id}")
-            session = await session_service.get_session(
-                app_name=self.app_name, user_id=self.user_id, session_id=self.session_id
-            )
-            if session:
-                logger.info(f"Get session with session_id={session.id}")
-                logger.info(f"Session has {len(session.events)} events")
-
-                for event in session.events:
-                    if event.id == event_id:
-                        self.selected_event_content = event.model_dump_json(indent=2)
-            else:
-                logger.warning("No history events found in session.")
+        for event in session.events:
+            if event.id == event_id:
+                self.selected_event_content = event.model_dump_json(indent=2)
 
     @rx.event
-    async def update_runner_config_from_form(self, data: dict | None = None):
+    async def update_runner_config(self, data: dict | None = None):
         if data:
             app_name = data["app_name"]
             user_id = data["user_id"]
@@ -310,39 +357,29 @@ class ChatState(rx.State):
             self.user_id = user_id
             self.session_id = session_id
 
-            global runner
-            if runner and runner.short_term_memory:
-                await runner.short_term_memory.create_session(
-                    app_name=self.app_name,
-                    user_id=self.user_id,
-                    session_id=session_id,
-                )
-                self.session_ids.append(session_id)
-
-            if runner:
-                runner.app_name = self.app_name
-                runner.user_id = self.user_id
+            await self.add_session()
         else:
             logger.error("Receive no form data!")
 
     @rx.event
     async def add_session(self):
-        session_id = f"s_{uuid.uuid4()}"
+        """Add a session to current <app_name, user_id>"""
+        session_id = "session_" + str(uuid.uuid4()).split("-")[0]
 
-        if session_id in self.session_ids:
-            logger.error("Session id has been in your history session.")
-            return
-
-        logger.debug(f"Runner: {runner}")
         if runner and runner.short_term_memory:
             await runner.short_term_memory.create_session(
                 app_name=self.app_name,
                 user_id=self.user_id,
                 session_id=session_id,
             )
-            logger.debug(f"Create session with id {session_id}")
-            self.session_ids.append(session_id)
-            self.session_id = session_id
+            session = await self._get_session(session_id=session_id)
+
+            if session:
+                self.session_id = session_id
+                self.session = session
+                self.sessions.append(session)
+
+                logger.debug(f"Create session with id {session_id}")
 
             # refresh history messages
             await self.load_session(session_id)
@@ -355,41 +392,46 @@ class ChatState(rx.State):
             list_sessions_response = await session_service.list_sessions(
                 app_name=self.app_name, user_id=self.user_id
             )
-            sessions = list_sessions_response.sessions
-            self.session_ids = [session.id for session in sessions]
+            self.sessions = list_sessions_response.sessions
         else:
-            self.session_ids = []
+            self.sessions = []
 
     @rx.event
     async def load_session(self, session_id: str):
         """Load session from a session service, and set the history conversations to chat state."""
-        if runner and runner.short_term_memory:
-            session_service = runner.short_term_memory.session_service
+        self.session_id = session_id
 
-            logger.info(f"Load session with expected session_id={session_id}")
-            session = await session_service.get_session(
-                app_name=self.app_name, user_id=self.user_id, session_id=session_id
-            )
-            if session:
-                logger.info(f"Get session with session_id={session.id}")
-                logger.info(f"Session has {len(session.events)} events")
+        session = await self._get_session()
+        self.session = session
 
-                _message_list: list[Message] = []
-                for event in session.events:
-                    message = self._event_to_message(event)
-                    if message:
-                        _message_list.append(message)
-                self.message_list = _message_list
+        logger.info(f"Get session with session_id={session.id}")
+        logger.info(f"Session has {len(session.events)} events")
 
-            else:
-                logger.warning("No history events found in session.")
+        # Step 1: update message list
+        _message_list: list[Message] = []
+        for event in session.events:
+            message = self._event_to_message(event)
+            if message:
+                _message_list.append(message)
+        self.message_list = _message_list
+
+        # Step 2: update eval cases
+        await self.update_eval_case()
+
+    @rx.var
+    def reversed_sessions(self) -> list[Session]:
+        return list(reversed(self.sessions))
+
+    @rx.var
+    def num_sessions(self) -> int:
+        return len(self.sessions)
 
     def _event_to_message(self, event: Event) -> Message | None:
         if event.author == "user":
             return Message(role="user", content=event.content.parts[0].text)  # type: ignore
+
         if event.get_function_calls():
             for function_call in event.get_function_calls():
-                logger.debug(f"Function call: {function_call}")
                 return Message(
                     role="tool_call",
                     tool_name=function_call.name
@@ -401,7 +443,6 @@ class ChatState(rx.State):
 
         if event.get_function_responses():
             for function_response in event.get_function_responses():
-                logger.debug(f"Function response: {function_response}")
                 return Message(
                     role="tool_response",
                     tool_name=function_response.name
@@ -427,6 +468,24 @@ class ChatState(rx.State):
     #     if key == "Enter":
     #         async for t in self.answer():
     #             yield t
+
+    async def _get_session(self, session_id="") -> Session:
+        if not session_id:
+            session_id = self.session_id
+
+        if runner and runner.short_term_memory:
+            session_service = runner.short_term_memory.session_service
+
+            session = await session_service.get_session(
+                app_name=self.app_name, user_id=self.user_id, session_id=session_id
+            )
+
+            if not session:
+                raise RuntimeError("Session not found.")
+        else:
+            raise RuntimeError("Runner not set.")
+
+        return session
 
 
 class PageState(rx.State):

@@ -26,10 +26,17 @@ def agent_page() -> rx.Component:
                     rx.tabs.root(
                         rx.tabs.list(
                             rx.tabs.trigger("Metadata", value="metadata"),
-                            rx.tabs.trigger("Sessions", value="sessions"),
+                            rx.tabs.trigger(
+                                rx.hstack(
+                                    rx.text("Sessions"),
+                                    rx.badge(ChatState.num_sessions),
+                                    spacing="1",
+                                ),
+                                value="sessions",
+                            ),
                             rx.tabs.trigger("Event", value="event"),
-                            rx.tabs.trigger("Memory", value="memory"),
-                            rx.tabs.trigger("Knowledgebase", value="knowledgebase"),
+                            # rx.tabs.trigger("Memory", value="memory"),
+                            # rx.tabs.trigger("Knowledgebase", value="knowledgebase"),
                             rx.tabs.trigger("Evaluation", value="evaluation"),
                         ),
                         rx.tabs.content(

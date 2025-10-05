@@ -2,7 +2,7 @@ import reflex as rx
 from studio.state import AgentState, ChatState, PageState
 
 
-def eval_case_dialog() -> rx.Component:
+def eval_case_dialog(eval_case_id: str) -> rx.Component:
     return rx.dialog.content(
         rx.dialog.title("Evaluate your case"),
         rx.dialog.description(
@@ -19,7 +19,9 @@ def eval_case_dialog() -> rx.Component:
                         rx.heading("Input", size="3"),
                         rx.scroll_area(
                             rx.text(
-                                ChatState.selected_eval_case.user_content.parts[0].text
+                                ChatState.eval_cases_map[eval_case_id]
+                                .user_content.parts[0]
+                                .text
                             ),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
@@ -29,9 +31,9 @@ def eval_case_dialog() -> rx.Component:
                         rx.heading("Output", size="3"),
                         rx.box(
                             rx.scroll_area(
-                                ChatState.selected_eval_case.final_response.parts[
-                                    0
-                                ].text
+                                ChatState.eval_cases_map[eval_case_id]
+                                .final_response.parts[0]
+                                .text
                             ),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
@@ -66,8 +68,8 @@ def eval_case_dialog() -> rx.Component:
                         rx.button(
                             "Evaluate",
                             class_name="ml-auto",
-                            on_click=lambda: ChatState.evaluate_eval_case(
-                                AgentState.agent
+                            on_click=ChatState.evaluate(
+                                eval_case_id=eval_case_id, agent=AgentState.agent
                             ),
                         ),
                         class_name="h-[10%] w-full items-end justify-end",

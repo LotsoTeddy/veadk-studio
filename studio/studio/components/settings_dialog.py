@@ -46,7 +46,7 @@ def settings_dialog() -> rx.Component:
                 ),
                 on_submit=[
                     ChatState.load_sessions,
-                    ChatState.update_runner_config_from_form,
+                    ChatState.update_runner_config,
                 ],
             ),
         ),

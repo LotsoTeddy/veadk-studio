@@ -22,7 +22,7 @@ def _evaluation_unit(id: str, input: str, output: str) -> rx.Component:
                 ),
             ),
             orientation="vertical",
-            class_name="flex-1 min-w-0 overflow-x-hidden",
+            class_name="flex-1 min-w-0 overflow-x-hidden ",
         ),
         # rx.vstack(
         #     rx.text(
@@ -46,17 +46,14 @@ def _evaluation_unit(id: str, input: str, output: str) -> rx.Component:
         #     class_name="flex-1 min-w-0 overflow-x-hidden",
         # ),
         id=id,
-        class_name="w-full flex-1 min-w-0 hover:bg-slate-3 cursor-pointer",
+        class_name="w-full flex-1 min-w-0 hover:bg-slate-3 cursor-pointer transition-colors",
     )
 
 
 def evaluation_unit(id: str, input: str, output: str) -> rx.Component:
     return rx.dialog.root(
-        rx.dialog.trigger(
-            _evaluation_unit(id, input, output),
-            on_click=lambda: ChatState.set_current_eval_case(id),
-        ),
-        eval_case_dialog(),
+        rx.dialog.trigger(_evaluation_unit(id, input, output)),
+        eval_case_dialog(eval_case_id=id),
         class_name="max-h-1/2 max-w-1/2 min-h-0",
     )
 
