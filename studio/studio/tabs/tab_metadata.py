@@ -1,5 +1,4 @@
 import reflex as rx
-from studio.components.prompt_optimize_dialog import prompt_optimize_dialog
 from studio.state import AgentState, PageState
 
 
