@@ -13,7 +13,14 @@ def session_unit(session: Session) -> rx.Component:
                 class_name="font-mono tracking-tight",
             ),
             rx.text(
-                f"N events",
+                f"{ChatState.session_to_num_events_map[session.id]} events",
+                size="1",
+                weight="regular",
+                color="gray",
+                class_name="text-grey-800",
+            ),
+            rx.text(
+                f"Last updated at {ChatState.session_to_timestamp_map[session.id]}",
                 size="1",
                 weight="regular",
                 color="gray",

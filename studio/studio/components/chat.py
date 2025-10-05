@@ -39,9 +39,15 @@ def render_message(message: Message) -> rx.Component:
                 rx.markdown(
                     message.content,
                     class_name="[&>p]:!my-2.5",
-                    on_click=ChatState.get_event(message.event_id),
+                    on_click=[
+                        ChatState.get_event(message.event_id),
+                        rx.call_script("""
+            const event_tab_trigger = document.querySelector('#tab-event-trigger');
+            if (event_tab_trigger) event_tab_trigger.click();
+        """),
+                    ],
                 ),
-                rx.box(
+                rx.hstack(
                     rx.el.button(
                         rx.icon(tag="copy", size=18),
                         class_name="p-1 text-slate-10 hover:text-slate-11 transform transition-colors cursor-pointer",
@@ -51,7 +57,7 @@ def render_message(message: Message) -> rx.Component:
                         ],
                         title="Copy",
                     ),
-                    class_name="-bottom-9 left-3 absolute opacity-0 group-hover:opacity-100 transition-opacity",
+                    class_name="-bottom-9 left-3 absolute opacity-0 group-hover:opacity-100 transition-opacity justify-between",
                 ),
                 class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
                 on_click=ChatState.get_event(message.event_id),

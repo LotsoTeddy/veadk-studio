@@ -5,52 +5,48 @@ from studio.state import AgentState, PageState
 def deploy_dialog() -> rx.Component:
     return rx.dialog.root(
         rx.dialog.content(
-            rx.dialog.title("Optimize your prompt"),
+            rx.dialog.title("Deploy to cloud"),
             rx.dialog.description(
-                "with Volcengine PromptPilot",
+                "with Volcengine Function as a Service (VeFaaS)",
                 size="2",
                 margin_bottom="16px",
             ),
-            rx.hstack(
+            rx.form(
                 rx.vstack(
-                    rx.form(
-                        rx.form.field(
-                            rx.form.label("System prompt"),
-                            rx.text_area(
-                                default_value=str(AgentState.agent.instruction),
-                                name="instruction",
-                            ),
-                            class_name="w-full",
+                    rx.form.field(
+                        rx.form.label("Expected application name"),
+                        rx.input(
+                            default_value=AgentState.selected_agent,
+                            name="vefaas_application_name",
                         ),
-                        rx.button("Replace", type="submit"),
+                        class_name="w-full",
+                    ),
+                    rx.form.field(
+                        rx.form.label("API Gateway instance name"),
+                        rx.input(
+                            name="veapig_instance_name",
+                        ),
+                        class_name="w-full",
+                    ),
+                    rx.form.field(
+                        rx.checkbox(
+                            name="checkbox",
+                            label="Enable KEY Auth",
+                            text="Enable KEY Auth",
+                        ),
+                    ),
+                ),
+                rx.dialog.close(
+                    rx.button(
+                        "Deploy",
+                        type="submit",
+                        on_click=[
+                            PageState.close_settings_dialog,
+                        ],
+                        class_name="ml-auto",
                     )
                 ),
-                rx.vstack(
-                    rx.form(
-                        rx.form.field(
-                            rx.form.label("Optimize requirements"),
-                            rx.text_area(
-                                default_value=str(AgentState.agent.instruction),
-                                name="instruction",
-                            ),
-                            class_name="w-full",
-                        ),
-                        rx.button("Optimize", type="submit"),
-                    )
-                ),
-                rx.vstack(
-                    rx.form(
-                        rx.form.field(
-                            rx.form.label("Final prompt"),
-                            rx.text_area(
-                                default_value=str(AgentState.agent.instruction),
-                                name="instruction",
-                            ),
-                            class_name="w-full",
-                        ),
-                        rx.button("Update", type="submit"),
-                    )
-                ),
+                on_submit=[],
             ),
         ),
         open=PageState.deploy_dialog_flag,

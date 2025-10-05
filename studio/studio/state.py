@@ -130,6 +130,9 @@ class AgentState(rx.State):
         self.is_optimizing = False
 
     async def _set_agent_metadata(self):
+        if not self.agent:
+            rx.redirect("/")
+
         self.system_prompt = str(self.agent.instruction)
 
         if self.agent.knowledgebase and isinstance(
@@ -181,6 +184,12 @@ class ChatState(rx.State):
 
     sessions: list[Session] = []
     """Maintain sessions for rendering in the session tab"""
+
+    session_to_num_events_map: dict[str, int] = {}
+    """Map from session id to number of events in the session"""
+
+    session_to_timestamp_map: dict[str, str] = {}
+    """Map from session id to timestamp of the last update time of the session"""
 
     selected_event_content: str = "No event selected."
     """The currently selected event content"""
@@ -264,6 +273,12 @@ class ChatState(rx.State):
         self.processing = False
 
         logger.debug("Generate done.")
+
+        session = await self._get_session()
+        self.session_to_num_events_map[session.id] = len(session.events)
+        self.session_to_timestamp_map[session.id] = datetime.fromtimestamp(
+            session.last_update_time
+        ).strftime("%Y-%m-%d %H:%M:%S")
 
     # evaluation services
     async def update_eval_case(self):
@@ -364,6 +379,9 @@ class ChatState(rx.State):
     @rx.event
     async def add_session(self):
         """Add a session to current <app_name, user_id>"""
+        if not runner:
+            rx.redirect("/")
+
         session_id = "session_" + str(uuid.uuid4()).split("-")[0]
 
         if runner and runner.short_term_memory:
@@ -414,6 +432,11 @@ class ChatState(rx.State):
             if message:
                 _message_list.append(message)
         self.message_list = _message_list
+
+        self.session_to_num_events_map[session.id] = len(session.events)
+        self.session_to_timestamp_map[session.id] = datetime.fromtimestamp(
+            session.last_update_time
+        ).strftime("%Y-%m-%d %H:%M:%S")
 
         # Step 2: update eval cases
         await self.update_eval_case()
@@ -528,6 +551,14 @@ class DeployState(rx.State):
     @rx.var
     def user_project_path(self) -> str:
         return str(Path.cwd())
+
+    @rx.event
+    def deploy(self, deploy_config: dict):
+        vefaas_application_name = deploy_config["vefaas_application_name"]
+        veapig_instance_name = deploy_config["veapig_instance_name"]
+        enable_key_auth = deploy_config["enable_key_auth"]
+
+        pass
 
     @rx.event
     def upload_to_vefaas(self):

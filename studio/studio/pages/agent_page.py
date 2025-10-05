@@ -34,7 +34,9 @@ def agent_page() -> rx.Component:
                                 ),
                                 value="sessions",
                             ),
-                            rx.tabs.trigger("Event", value="event"),
+                            rx.tabs.trigger(
+                                "Event", value="event", id="tab-event-trigger"
+                            ),
                             # rx.tabs.trigger("Memory", value="memory"),
                             # rx.tabs.trigger("Knowledgebase", value="knowledgebase"),
                             rx.tabs.trigger("Evaluation", value="evaluation"),
