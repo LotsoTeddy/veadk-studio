@@ -24,7 +24,7 @@ def navbar() -> rx.Component:
             rx.hstack(
                 rx.hstack(
                     rx.image(
-                        src="/logo.jpg",
+                        src="/volcengine-color.svg",
                         width="2.25em",
                         height="auto",
                         border_radius="25%",

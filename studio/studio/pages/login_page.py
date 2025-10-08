@@ -1,5 +1,6 @@
 import reflex as rx
 from studio.consts import GITHUB_CLIENT_ID
+from studio.state import ChatState
 
 
 def login_page() -> rx.Component:
@@ -22,7 +23,7 @@ def login_page() -> rx.Component:
         rx.vstack(
             rx.flex(
                 rx.image(
-                    src="/logo.jpg",
+                    src="/volcengine-color.svg",
                     width="2.5em",
                     height="auto",
                     border_radius="25%",
@@ -49,7 +50,8 @@ def login_page() -> rx.Component:
                 ),
                 rx.input(
                     rx.input.slot(rx.icon("user")),
-                    placeholder="user01",
+                    value=ChatState.user_id,
+                    on_change=ChatState.set_user_id,
                     size="3",
                     width="100%",
                 ),
@@ -57,7 +59,7 @@ def login_page() -> rx.Component:
                 spacing="2",
                 width="100%",
             ),
-            rx.button("Start", size="3", width="100%"),
+            rx.button("Start", size="3", width="100%", on_click=rx.redirect("/main")),
             rx.hstack(
                 rx.divider(margin="0"),
                 rx.text(
@@ -83,5 +85,5 @@ def login_page() -> rx.Component:
         size="4",
         max_width="28em",
         width="100%",
-        class_name="mx-auto my-auto",
+        class_name="mx-auto mt-20",
     )
