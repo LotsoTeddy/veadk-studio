@@ -52,7 +52,7 @@ def navbar() -> rx.Component:
                         "cloud-upload",
                         on_click=[PageState.open_deploy_dialog],
                     ),
-                    rx.color_mode.button(),
+                    # rx.color_mode.button(),
                     align_items="center",
                     spacing="5",
                 ),
