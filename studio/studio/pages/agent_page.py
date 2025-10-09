@@ -1,5 +1,5 @@
 import reflex as rx
-from studio.components.chat import action_bar, chat
+from studio.components.chat import action_bar, chat, info
 from studio.components.deploy_dialog import deploy_dialog
 from studio.components.hints import hints
 from studio.components.navbar import navbar
@@ -86,6 +86,7 @@ def agent_page() -> rx.Component:
             ),
             rx.flex(
                 rx.box(
+                    info(),
                     chat(),
                     hints(),
                     class_name="relative flex-1 w-full min-h-0",

@@ -44,7 +44,7 @@ def login_page() -> rx.Component:
                     rx.input(
                         rx.input.slot(rx.icon("user")),
                         value=ChatState.user_id,
-                        on_change=ChatState.set_user_id,
+                        on_change=ChatState.set_user_id,  # type: ignore
                         size="3",
                         width="100%",
                     ),

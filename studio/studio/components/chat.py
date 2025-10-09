@@ -125,6 +125,15 @@ def render_message(message: Message) -> rx.Component:
     )  # type: ignore
 
 
+def info() -> rx.Component:
+    return rx.hstack(
+        rx.badge(rx.icon("app-window", size=16), f"{ChatState.app_name}"),
+        rx.badge(rx.icon("user-round", size=16), f"{ChatState.user_id}"),
+        rx.badge(rx.icon("message-circle", size=16), f"{ChatState.session_id}"),
+        spacing="2",
+    )
+
+
 def chat() -> rx.Component:
     return rx.scroll_area(
         rx.foreach(
