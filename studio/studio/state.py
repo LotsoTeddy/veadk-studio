@@ -12,7 +12,7 @@ from deepeval.test_case import LLMTestCaseParams
 from google.adk.cli.utils import evals
 from google.adk.cli.utils.agent_loader import AgentLoader
 from google.adk.evaluation.eval_case import EvalCase as ADKEvalCase
-from google.adk.evaluation.eval_case import Invocation
+from google.adk.evaluation.eval_case import Invocation, SessionInput
 from google.adk.evaluation.eval_set import EvalSet as ADKEvalSet
 from google.adk.events import Event
 from google.adk.sessions import Session
@@ -33,6 +33,27 @@ logger = get_logger(__name__)
 agent_loader = AgentLoader(agents_dir=str(Path.cwd()))
 
 runner: Runner | None = None
+
+
+class AgentBuildConfig(rx.State):
+    agent_name: str = ""
+    agent_description: str = ""
+    agent_instruction: str = ""
+
+    long_term_memory_backend: str = ""
+    long_term_memory_backends: list[str] = [
+        "in_memory",
+    ]
+
+    short_term_memory_backend: str = ""
+    short_term_memory_backends: list[str] = []
+
+    knowledgebase_backend: str = ""
+    knowledgebase_backends: list[str] = []
+
+    tools: list[str] = []
+
+    sub_agents: list[Agent] = []
 
 
 class AgentState(rx.State):
@@ -224,6 +245,11 @@ class ChatState(rx.State):
     evaluation_reason: str = ""
 
     @rx.event
+    def set_prompt(self, prompt: str):
+        self.prompt = prompt
+        self.message_list.append(Message(role="user", content=self.prompt))
+
+    @rx.event
     async def generate(self):
         """Handle user task request.
 
@@ -241,7 +267,6 @@ class ChatState(rx.State):
         self.processing = True
         yield
 
-        self.message_list.append(Message(role="user", content=self.prompt))
         new_message = Content(parts=[Part(text=self.prompt)], role="user")
 
         global runner
@@ -292,7 +317,7 @@ class ChatState(rx.State):
         }
 
     @rx.event
-    async def evaluate(self, eval_case_id: str, agent):
+    async def evaluate(self, eval_case_id: str):
         logger.debug("Start to evaluate.")
 
         invocation = self.eval_cases_map.get(eval_case_id)
@@ -304,6 +329,11 @@ class ChatState(rx.State):
         _eval_case = ADKEvalCase(
             eval_id=f"eval_{formatted_timestamp()}",
             conversation=[invocation],  # type: ignore
+            session_input=SessionInput(
+                app_name=self.app_name,
+                user_id=self.user_id,
+                state={},
+            ),
             creation_timestamp=0.0,
         )
 
@@ -317,6 +347,8 @@ class ChatState(rx.State):
 
         logger.debug("Prepare evaluation set done.")
 
+        agent_state = await self.get_state(AgentState)
+        agent = agent_state.agent
         evaluator = DeepevalEvaluator(agent=agent)
 
         logger.debug("Prepare evaluator done.")

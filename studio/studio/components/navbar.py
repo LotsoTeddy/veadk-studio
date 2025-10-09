@@ -12,10 +12,11 @@ def navbar_link(text: str, url: str) -> rx.Component:
     )
 
 
-def navbar_icon_button(type: str, on_click: Any = []) -> rx.Component:
-    return rx.button(
-        rx.icon(type), variant="ghost", on_click=on_click, class_name="cursor-pointer"
-    )
+# navbar_link("Home", "/"),
+#                     navbar_link(
+#                         "Documentation", "https://volcengine.github.io/veadk-python/"
+#                     ),
+#                     navbar_link("Github", "https://github.com/volcengine/veadk-python"),
 
 
 def navbar() -> rx.Component:
@@ -31,66 +32,42 @@ def navbar() -> rx.Component:
                     ),
                     rx.heading("VeADK Studio", size="4", weight="bold"),
                     align_items="center",
+                    on_click=rx.redirect("/main"),
+                    class_name="flex cursor-pointer",
                 ),
                 rx.hstack(
-                    navbar_link("Home", "/"),
-                    navbar_link(
-                        "Documentation", "https://volcengine.github.io/veadk-python/"
-                    ),
-                    navbar_link("Github", "https://github.com/volcengine/veadk-python"),
-                    navbar_icon_button(
-                        "settings", on_click=[PageState.open_settings_dialog]
-                    ),
-                    navbar_icon_button(
-                        "plus",
-                        on_click=[
-                            lambda: ChatState.add_session,
-                            # lambda: ChatState.load_session(ChatState.session_id),
-                        ],
-                    ),
-                    navbar_icon_button(
-                        "cloud-upload",
-                        on_click=[PageState.open_deploy_dialog],
-                    ),
-                    # rx.color_mode.button(),
+                    rx.button("Documents", on_click=rx.redirect("/"), variant="ghost"),
+                    rx.button("Tutorial", on_click=rx.redirect("/"), variant="ghost"),
                     align_items="center",
-                    spacing="5",
+                    spacing="3",
+                    class_name="flex-1",
                 ),
-                justify="between",
+                rx.popover.root(
+                    rx.popover.trigger(
+                        rx.button(
+                            rx.avatar(
+                                fallback="RX",
+                                color_scheme="cyan",
+                                class_name="cursor-pointer",
+                            ),
+                            variant="ghost",
+                            class_name="p-0",
+                        )
+                    ),
+                    rx.popover.content(
+                        rx.flex(
+                            rx.text(ChatState.user_id),
+                            direction="column",
+                            spacing="3",
+                        ),
+                    ),
+                    class_name="flex ml-auto",
+                ),
+                spacing="5",
                 align_items="center",
                 width="100%",
             ),
         ),
-        rx.mobile_and_tablet(
-            rx.hstack(
-                rx.hstack(
-                    rx.image(
-                        src="/logo.jpg",
-                        width="2em",
-                        height="auto",
-                        border_radius="25%",
-                    ),
-                    rx.heading("Reflex", size="6", weight="bold"),
-                    align_items="center",
-                ),
-                rx.menu.root(
-                    rx.menu.trigger(rx.icon("menu", size=30)),
-                    rx.menu.content(
-                        rx.menu.item("Home"),
-                        rx.menu.item("About"),
-                        rx.menu.item("Pricing"),
-                        rx.menu.item("Contact"),
-                    ),
-                    justify="end",
-                ),
-                justify="between",
-                align_items="center",
-            ),
-        ),
-        # bg=rx.color("accent", 3),
         padding="1em",
-        # position="fixed",
-        # top="0px",
-        # z_index="5",
         width="100%",
     )

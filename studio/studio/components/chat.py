@@ -1,7 +1,8 @@
 import reflex as rx
+from studio.components.hints import hints
 
 # from frontend.components.badge import made_with_reflex
-from studio.state import AuthState, ChatState
+from studio.state import AgentState, AuthState, ChatState, PageState
 from studio.types import Message
 
 
@@ -125,27 +126,64 @@ def render_message(message: Message) -> rx.Component:
     )  # type: ignore
 
 
-def info() -> rx.Component:
+def info_bar() -> rx.Component:
     return rx.hstack(
-        rx.badge(rx.icon("app-window", size=16), f"{ChatState.app_name}"),
-        rx.badge(rx.icon("user-round", size=16), f"{ChatState.user_id}"),
-        rx.badge(rx.icon("message-circle", size=16), f"{ChatState.session_id}"),
-        spacing="2",
+        rx.hstack(
+            rx.image(src="/agent_avatar.webp", class_name="h-8 w-8"),
+            rx.text(AgentState.agent.name, class_name="text-sm font-semibold"),
+            rx.badge(AgentState.agent.model_name, class_name="text-xs"),
+            spacing="2",
+            align="center",
+        ),
+        rx.hstack(
+            rx.tooltip(
+                rx.button(
+                    rx.icon("plus", size=18),
+                    on_click=[
+                        lambda: ChatState.add_session,
+                    ],
+                    class_name="cursor-pointer",
+                    variant="ghost",
+                ),
+                content="Create a new session",
+            ),
+            rx.tooltip(
+                rx.button(
+                    rx.icon("cloud-upload", size=18),
+                    on_click=[PageState.open_deploy_dialog],
+                    class_name="cursor-pointer",
+                    variant="ghost",
+                ),
+                content="Deploy to cloud",
+            ),
+            # rx.button(
+            #     rx.icon("settings", size=16),
+            #     "Settings",
+            #     size="1",
+            #     on_click=[PageState.open_settings_dialog],
+            #     class_name="cursor-pointer",
+            #     variant="ghost",
+            # ),
+            spacing="3",
+        ),
+        class_name="w-full",
+        align="center",
+        justify="between",
     )
 
 
-def chat() -> rx.Component:
+def messages_area() -> rx.Component:
     return rx.scroll_area(
         rx.foreach(
             ChatState.message_list,
             lambda message: render_message(message),
         ),
         scrollbars="vertical",
-        class_name="w-full",
+        class_name="flex w-full flex-1 min-h-0",
     )
 
 
-def action_bar() -> rx.Component:
+def input_bar() -> rx.Component:
     return rx.box(
         rx.box(
             rx.el.input(
@@ -177,4 +215,21 @@ def action_bar() -> rx.Component:
             class_name="relative w-full",
         ),
         class_name="flex flex-col justify-center items-center gap-6 w-full",
+    )
+
+
+def chat() -> rx.Component:
+    return rx.vstack(
+        rx.cond(
+            ChatState.message_list,
+            info_bar(),
+        ),
+        rx.box(
+            messages_area(),
+            hints(),
+            class_name="relative flex-1 w-full min-h-0",
+        ),
+        input_bar(),
+        spacing="3",
+        class_name="flex flex-1 w-full min-h-0 h-full",
     )

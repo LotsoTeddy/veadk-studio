@@ -68,13 +68,11 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                         rx.button(
                             "Evaluate",
                             class_name="ml-auto",
-                            on_click=ChatState.evaluate(
-                                eval_case_id=eval_case_id, agent=AgentState.agent
-                            ),
+                            on_click=ChatState.evaluate(eval_case_id=eval_case_id),
                         ),
                         class_name="h-[10%] w-full items-end justify-end",
                     ),
-                    class_name="w-full h-full flex flex-col gap-4 min-h-0 justify-between ",
+                    class_name="w-full h-full flex flex-col gap-4 min-h-0 justify-between",
                 ),
                 class_name="w-1/3 h-full flex flex-col gap-4 min-h-0 shadow-sm p-4",
             ),
