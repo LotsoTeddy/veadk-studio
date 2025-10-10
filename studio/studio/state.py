@@ -108,9 +108,6 @@ class AgentState(rx.State):
 
         await self._set_agent_metadata()
 
-        # redirect to session page
-        return rx.redirect("/test")
-
     @rx.event
     def update_system_prompt(self, data: dict):
         """Update current system prompt to user's input"""
@@ -300,6 +297,13 @@ class ChatState(rx.State):
 
         session = await self._get_session()
         self.session_to_num_events_map[session.id] = len(session.events)
+
+        # last_update = datetime.fromtimestamp(session.last_update_time)
+        # now = datetime.now()
+        # self.session_to_timestamp_map[session.id] = humanize.naturaltime(
+        #     now - last_update
+        # )
+
         self.session_to_timestamp_map[session.id] = datetime.fromtimestamp(
             session.last_update_time
         ).strftime("%Y-%m-%d %H:%M:%S")
@@ -310,6 +314,9 @@ class ChatState(rx.State):
         logger.debug(f"Update eval case with session id {session.id}")
 
         self.eval_cases = evals.convert_session_to_eval_invocations(session)
+
+        if self.eval_cases:
+            print(f"invocation id from eval: {self.eval_cases[-1].invocation_id}")
 
         self.eval_cases_map = {
             eval_case.invocation_id: eval_case for eval_case in self.eval_cases
@@ -465,6 +472,7 @@ class ChatState(rx.State):
         self.message_list = _message_list
 
         self.session_to_num_events_map[session.id] = len(session.events)
+
         self.session_to_timestamp_map[session.id] = datetime.fromtimestamp(
             session.last_update_time
         ).strftime("%Y-%m-%d %H:%M:%S")
@@ -514,8 +522,13 @@ class ChatState(rx.State):
             and len(event.content.parts[0].text.strip()) > 0
         ):
             final_response = event.content.parts[0].text
-
-            return Message(role="assistant", content=final_response, event_id=event.id)
+            print(f"invocation id from message: {event.invocation_id}")
+            return Message(
+                role="assistant",
+                content=final_response,
+                event_id=event.id,
+                invocation_id=event.invocation_id,
+            )
 
     # control services
     # async def handle_key_down(self, key: str):
@@ -543,9 +556,21 @@ class ChatState(rx.State):
 
 
 class PageState(rx.State):
+    choose_agent_dialog_flag: bool = False
     open_settings_dialog_flag: bool = False
     open_prompt_optimize_dialog_flag: bool = False
+    open_agent_dialog_flag: bool = False
+    open_eval_dialog_flag: bool = False
+    open_event_drawer_flag: bool = False
     deploy_dialog_flag: bool = False
+
+    @rx.event
+    def open_choose_agent_dialog(self):
+        self.choose_agent_dialog_flag = True
+
+    @rx.event
+    def close_choose_agent_dialog(self):
+        self.choose_agent_dialog_flag = False
 
     # settings dialog
     @rx.event
@@ -573,6 +598,30 @@ class PageState(rx.State):
     @rx.event
     def close_deploy_dialog(self):
         self.deploy_dialog_flag = False
+
+    @rx.event
+    def open_agent_dialog(self):
+        self.open_agent_dialog_flag = True
+
+    @rx.event
+    def close_agent_dialog(self):
+        self.open_agent_dialog_flag = False
+
+    @rx.event
+    def open_eval_dialog(self):
+        self.open_eval_dialog_flag = True
+
+    @rx.event
+    def close_eval_dialog(self):
+        self.open_eval_dialog_flag = False
+
+    @rx.event
+    def open_event_drawer(self):
+        self.open_event_drawer_flag = True
+
+    @rx.event
+    def close_event_drawer(self):
+        self.open_event_drawer_flag = False
 
 
 class DeployState(rx.State):
@@ -638,4 +687,4 @@ class AuthState(rx.State):
             else:
                 logger.error("Error get user information.")
 
-            return rx.redirect("/main")
+            return rx.redirect("/welcome")

@@ -1,4 +1,7 @@
 import reflex as rx
+from fastapi import background
+from studio.components.eval_case_dialog import eval_case_dialog
+from studio.components.event_drawer import event_drawer
 from studio.components.hints import hints
 
 # from frontend.components.badge import made_with_reflex
@@ -13,101 +16,119 @@ def render_message(message: Message) -> rx.Component:
                 message.content,
                 class_name="[&>p]:!my-2.5",
             ),
-            class_name="relative bg-slate-3 px-5 rounded-3xl max-w-[70%] text-slate-12 self-end",
+            class_name="relative px-3 rounded-2xl max-w-[70%] text-white self-end",
+            background_color="#323232d9",
         ),
-        rx.cond(
-            AuthState.user_avatar_url,
-            rx.box(
-                rx.image(src=AuthState.user_avatar_url, class_name="h-8 w-8"),
-                class_name="flex items-center",
-            ),
-        ),
-        class_name="flex flex-row gap-8 pb-10 group justify-end",
+        class_name="flex flex-row group justify-end",
     )
 
     assistant_message_ui = rx.box(
-        rx.box(
+        rx.vstack(
             rx.box(
-                rx.image(
-                    # src="https://avatar.iran.liara.run/username?username=nihao",
-                    src="/doubao-color.svg",
-                    class_name="h-8 w-8"
-                    + str(rx.cond(ChatState.processing, " animate-pulse", "")),
-                ),
-                class_name="flex items-center",
-            ),
-            rx.box(
-                rx.markdown(
-                    message.content,
-                    class_name="[&>p]:!my-2.5",
-                    on_click=[ChatState.get_event(message.event_id)],
-                ),
-                rx.hstack(
-                    rx.el.button(
-                        rx.icon(tag="copy", size=18),
-                        class_name="p-1 text-slate-10 hover:text-slate-11 transform transition-colors cursor-pointer",
-                        on_click=[
-                            rx.set_clipboard(message.content),
-                            rx.toast("Copied!"),
-                        ],
-                        title="Copy",
+                rx.drawer.root(
+                    rx.drawer.trigger(
+                        rx.markdown(
+                            message.content,
+                            class_name="[&>p]:!my-2.5",
+                            on_click=[
+                                ChatState.get_event(message.event_id),
+                                PageState.open_event_drawer,
+                            ],
+                        ),
                     ),
-                    class_name="-bottom-9 left-3 absolute opacity-0 group-hover:opacity-100 transition-opacity justify-between",
+                    event_drawer(),
+                    rx.drawer.overlay(z_index="5"),
+                    direction="left",
+                    on_open_change=PageState.close_event_drawer,
                 ),
-                class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
+                class_name="px-3 rounded-xl max-w-[100%] text-white self-start hover:bg-slate-2 cursor-pointer",
                 on_click=ChatState.get_event(message.event_id),
             ),
-            class_name="flex flex-row gap-4",
-        ),
-        class_name="flex flex-col gap-8 pb-10 group",
+            rx.hstack(
+                rx.el.button(
+                    rx.icon(tag="copy", size=18),
+                    class_name="p-1 text-slate-10 hover:text-slate-11 transform transition-colors cursor-pointer",
+                    on_click=[
+                        rx.set_clipboard(message.content),
+                        rx.toast("Copied!"),
+                    ],
+                ),
+                rx.el.button(
+                    rx.icon(tag="thumbs-up", size=18),
+                    class_name="p-1 text-slate-10 hover:text-slate-11 transform transition-colors cursor-pointer",
+                    on_click=[rx.toast("Thanks for your feedback!")],
+                ),
+                rx.el.button(
+                    rx.icon(tag="thumbs-down", size=18),
+                    class_name="p-1 text-slate-10 hover:text-slate-11 transform transition-colors cursor-pointer",
+                    on_click=[rx.toast("Thanks for your feedback!")],
+                ),
+                rx.dialog.root(
+                    rx.dialog.trigger(
+                        rx.el.button(
+                            rx.icon(tag="play", size=18),
+                            class_name="p-1 text-slate-10 hover:text-slate-11 transform transition-colors cursor-pointer",
+                            title="Evaluate",
+                        ),
+                    ),
+                    rx.cond(
+                        ChatState.eval_cases_map[message.invocation_id],
+                        eval_case_dialog(eval_case_id=message.invocation_id),
+                    ),
+                    class_name="min-h-0",
+                ),
+                class_name="px-3 gap-2",
+            ),
+            spacing="1",
+        )
     )
 
     tool_call_message_ui = rx.box(
         rx.box(
-            rx.box(
-                rx.image(
-                    # src="https://avatar.iran.liara.run/username?username=nihao",
-                    src="/doubao-color.svg",
-                    class_name="h-8 w-8"
-                    + str(rx.cond(ChatState.processing, " animate-pulse", "")),
+            rx.drawer.root(
+                rx.drawer.trigger(
+                    rx.markdown(
+                        f"**Call `{message.tool_name}`**",
+                        class_name="[&>p]:!my-2.5",
+                        on_click=[
+                            ChatState.get_event(message.event_id),
+                            PageState.open_event_drawer,
+                        ],
+                    ),
                 ),
-                class_name="flex items-center",
+                event_drawer(),
+                rx.drawer.overlay(z_index="5"),
+                direction="left",
+                on_open_change=PageState.close_event_drawer,
             ),
-            rx.box(
-                rx.markdown(
-                    f"Tool call: `{message.tool_name}`",
-                    class_name="[&>p]:!my-2.5",
-                ),
-                class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
-                on_click=ChatState.get_event(message.event_id),
-            ),
-            class_name="flex flex-row gap-6",
+            class_name="relative px-3 rounded-xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
+            on_click=ChatState.get_event(message.event_id),
         ),
-        class_name="flex flex-col gap-8 pb-10 group",
+        class_name="flex flex-col gap-8 group",
     )
 
     tool_response_message_ui = rx.box(
         rx.box(
-            rx.box(
-                rx.image(
-                    # src="https://avatar.iran.liara.run/username?username=nihao",
-                    src="/doubao-color.svg",
-                    class_name="h-8 w-8"
-                    + str(rx.cond(ChatState.processing, " animate-pulse", "")),
+            rx.drawer.root(
+                rx.drawer.trigger(
+                    rx.markdown(
+                        f"**Call `{message.tool_name}` done**",
+                        class_name="[&>p]:!my-2.5",
+                        on_click=[
+                            ChatState.get_event(message.event_id),
+                            PageState.open_event_drawer,
+                        ],
+                    ),
                 ),
-                class_name="flex items-center",
+                event_drawer(),
+                rx.drawer.overlay(z_index="5"),
+                direction="left",
+                on_open_change=PageState.close_event_drawer,
             ),
-            rx.box(
-                rx.markdown(
-                    f"Tool call: `{message.tool_name}` done",
-                    class_name="[&>p]:!my-2.5",
-                ),
-                class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
-                on_click=ChatState.get_event(message.event_id),
-            ),
-            class_name="flex flex-row gap-6",
+            class_name="relative px-3 rounded-xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
+            on_click=ChatState.get_event(message.event_id),
         ),
-        class_name="flex flex-col gap-8 pb-10 group",
+        class_name="flex flex-col gap-8 group",
     )
 
     return rx.match(
@@ -132,7 +153,7 @@ def info_bar() -> rx.Component:
         rx.hstack(
             rx.tooltip(
                 rx.button(
-                    rx.icon("plus", size=18),
+                    rx.icon("message-square-plus", size=20, color="white"),
                     on_click=[
                         lambda: ChatState.add_session,
                     ],
@@ -140,15 +161,6 @@ def info_bar() -> rx.Component:
                     variant="ghost",
                 ),
                 content="Create a new session",
-            ),
-            rx.tooltip(
-                rx.button(
-                    rx.icon("cloud-upload", size=18),
-                    on_click=[PageState.open_deploy_dialog],
-                    class_name="cursor-pointer",
-                    variant="ghost",
-                ),
-                content="Deploy to cloud",
             ),
             # rx.button(
             #     rx.icon("settings", size=16),
@@ -160,7 +172,7 @@ def info_bar() -> rx.Component:
             # ),
             spacing="3",
         ),
-        class_name="w-full",
+        class_name="w-full py-2",
         align="center",
         justify="between",
     )
@@ -168,12 +180,21 @@ def info_bar() -> rx.Component:
 
 def messages_area() -> rx.Component:
     return rx.scroll_area(
-        rx.foreach(
-            ChatState.message_list,
-            lambda message: render_message(message),
+        rx.box(
+            rx.foreach(
+                ChatState.message_list,
+                lambda message: render_message(message),
+            ),
+            rx.cond(
+                ChatState.processing,
+                rx.box(
+                    class_name="ml-3 mt-2 h-4 w-4 animate-spin rounded-full border-b-2 border-current"
+                ),
+            ),
+            class_name="flex flex-col gap-2 p-2",  # <--- 这里加 gap-2
         ),
         scrollbars="vertical",
-        class_name="flex w-full flex-1 min-h-0",
+        class_name="w-full flex-1 min-h-0",
     )
 
 
@@ -184,7 +205,8 @@ def input_bar() -> rx.Component:
                 placeholder="Ask anything",
                 on_change=ChatState.set_prompt,
                 id="prompt_input",
-                class_name="box-border bg-slate-3 px-4 py-2 pr-14 rounded-full w-full outline-none focus:outline-accent-10 h-[48px] text-slate-12 placeholder:text-slate-9",
+                class_name="box-border px-4 py-2 pr-14 rounded-full w-full outline-none focus:outline-accent-10 h-[48px] text-slate-12 placeholder:text-slate-9",
+                background_color="#303030",
             ),
             rx.el.button(
                 rx.cond(
@@ -213,18 +235,24 @@ def input_bar() -> rx.Component:
     )
 
 
+def tips() -> rx.Component:
+    return rx.text(
+        f"VeADK version: 0.2.0 | Current session: {ChatState.session_id}",
+        class_name="text-xs text-slate-9 mx-auto",
+    )
+
+
 def chat() -> rx.Component:
     return rx.vstack(
-        rx.cond(
-            ChatState.message_list,
-            info_bar(),
-        ),
+        info_bar(),
         rx.box(
             messages_area(),
             hints(),
             class_name="relative flex-1 w-full min-h-0",
         ),
         input_bar(),
+        tips(),
         spacing="3",
-        class_name="flex flex-1 w-full min-h-0 h-full",
+        width="50rem",
+        class_name="flex flex-1 min-h-0 h-full mx-auto",
     )

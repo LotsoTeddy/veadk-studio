@@ -1,11 +1,10 @@
 import reflex as rx
 
-from studio.pages.agent_page import agent_page
 from studio.pages.build_page import build_page
 from studio.pages.login_page import login_page
 from studio.pages.main_page import main_page
 from studio.pages.welcome_page import welcome_page
-from studio.state import AuthState, ChatState
+from studio.state import AuthState, ChatState, PageState
 
 app = rx.App(
     stylesheets=[
@@ -24,24 +23,17 @@ app.add_page(
 app.add_page(
     welcome_page,
     title="VeADK Studio - Volcengine Agent Development Kit",
-    route="/main",
+    route="/welcome",
 )
 
 app.add_page(build_page, route="/build")
 
 app.add_page(
-    agent_page,
-    route="/agent",
-    on_load=[
-        ChatState.add_session,
-    ],
-)
-
-app.add_page(
     main_page,
-    route="/test",
+    route="/main",
     on_load=[
-        ChatState.add_session,
+        PageState.open_choose_agent_dialog,
+        # ChatState.add_session,
     ],
 )
 

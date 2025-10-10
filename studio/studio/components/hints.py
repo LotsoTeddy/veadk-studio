@@ -1,5 +1,5 @@
 import reflex as rx
-from studio.state import AgentState, ChatState
+from studio.state import ChatState
 
 
 def template_card(icon: str, title: str, description: str, color: str) -> rx.Component:
@@ -7,8 +7,13 @@ def template_card(icon: str, title: str, description: str, color: str) -> rx.Com
         rx.icon(tag=icon, color=rx.color(color, 9), size=16),  # type: ignore
         rx.text(title, class_name="font-medium text-slate-11 text-sm"),
         rx.text(description, class_name="text-slate-10 text-xs"),
-        class_name="relative align-top flex flex-col gap-2 border-slate-4 bg-slate-1 hover:bg-slate-3 shadow-sm px-3 pt-3 pb-4 border rounded-2xl text-[15px] text-start transition-colors cursor-pointer",
-        on_click=[ChatState.set_prompt(description), ChatState.generate],
+        class_name="relative align-top flex flex-col gap-2 border-slate-4 hover:bg-slate-3 shadow-sm px-3 pt-3 pb-4 border rounded-2xl text-[15px] text-start transition-colors cursor-pointer",
+        background_color="#303030",
+        on_click=[
+            ChatState.set_prompt(description),  # type: ignore
+            ChatState.set_user_message,
+            ChatState.generate,
+        ],
     )
 
 

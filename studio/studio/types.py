@@ -16,3 +16,4 @@ class Message(BaseModel):
     tool_args: str = ""
     tool_response: str = ""
     event_id: str = ""
+    invocation_id: str = ""
