@@ -9,7 +9,9 @@ from studio.state import AuthState, ChatState, PageState
 def logo_area() -> rx.Component:
     return rx.hstack(
         rx.image(src="/volcengine-color.svg", class_name="h-6 w-6"),
-        rx.text("VeADK Studio", class_name="text-sm font-semibold ml-auto"),
+        rx.text(
+            "VeADK Studio", class_name="text-sm font-semibold ml-auto", color="white"
+        ),
         spacing="2",
         align="center",
         justify="start",
@@ -20,12 +22,13 @@ def logo_area() -> rx.Component:
 
 def option_item(icon: str, title: str, on_click: list = []) -> rx.Component:
     return rx.hstack(
-        rx.icon(icon, size=18),
-        rx.text(title, class_name="text-sm text-white"),
+        rx.icon(icon, size=18, color="white"),
+        rx.text(title, class_name="text-sm", color="white"),
         rx.icon(
             "chevron-right",
             class_name="ml-auto opacity-0 hover:opacity-100 transition-opacity duration-200",
             size=18,
+            color="white",
         ),
         align="center",
         class_name="px-2 py-2 hover:bg-slate-3 rounded-lg cursor-pointer w-full",
@@ -48,7 +51,7 @@ def option_area() -> rx.Component:
 def session_item(session: Session) -> rx.Component:
     return rx.hstack(
         rx.vstack(
-            rx.text(session.id, class_name="text-sm text-white"),
+            rx.text(session.id, class_name="text-sm", color="white"),
             rx.text(
                 f"{ChatState.session_to_timestamp_map[session.id]}",
                 class_name="text-xs text-slate-9",
@@ -106,7 +109,9 @@ def user_area() -> rx.Component:
             ),
         ),
         rx.vstack(
-            rx.text(ChatState.user_id, class_name="text-sm font-semibold"),
+            rx.text(
+                ChatState.user_id, class_name="text-sm font-semibold", color="white"
+            ),
             rx.text(
                 rx.cond(AuthState.user_name, "Github", "Local"),
                 class_name="text-xs text-slate-9",

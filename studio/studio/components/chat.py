@@ -1,21 +1,15 @@
 import reflex as rx
-from fastapi import background
 from studio.components.eval_case_dialog import eval_case_dialog
 from studio.components.event_drawer import event_drawer
 from studio.components.hints import hints
-
-# from frontend.components.badge import made_with_reflex
-from studio.state import AgentState, AuthState, ChatState, PageState
+from studio.state import AgentState, ChatState, PageState
 from studio.types import Message
 
 
 def render_message(message: Message) -> rx.Component:
     user_message_ui = rx.box(
         rx.box(
-            rx.markdown(
-                message.content,
-                class_name="[&>p]:!my-2.5",
-            ),
+            rx.markdown(message.content, class_name="[&>p]:!my-2.5", color="white"),
             class_name="relative px-3 rounded-2xl max-w-[70%] text-white self-end",
             background_color="#323232d9",
         ),
@@ -29,11 +23,12 @@ def render_message(message: Message) -> rx.Component:
                     rx.drawer.trigger(
                         rx.markdown(
                             message.content,
-                            class_name="[&>p]:!my-2.5",
+                            class_name="[&>p]:!my-2.5 text-white",
                             on_click=[
                                 ChatState.get_event(message.event_id),
                                 PageState.open_event_drawer,
                             ],
+                            color="white",
                         ),
                     ),
                     event_drawer(),
@@ -89,11 +84,12 @@ def render_message(message: Message) -> rx.Component:
                 rx.drawer.trigger(
                     rx.markdown(
                         f"**Call `{message.tool_name}`**",
-                        class_name="[&>p]:!my-2.5",
+                        class_name="[&>p]:!my-2.5 text-white",
                         on_click=[
                             ChatState.get_event(message.event_id),
                             PageState.open_event_drawer,
                         ],
+                        color="white",
                     ),
                 ),
                 event_drawer(),
@@ -113,11 +109,12 @@ def render_message(message: Message) -> rx.Component:
                 rx.drawer.trigger(
                     rx.markdown(
                         f"**Call `{message.tool_name}` done**",
-                        class_name="[&>p]:!my-2.5",
+                        class_name="[&>p]:!my-2.5 text-white",
                         on_click=[
                             ChatState.get_event(message.event_id),
                             PageState.open_event_drawer,
                         ],
+                        color="white",
                     ),
                 ),
                 event_drawer(),
@@ -145,7 +142,9 @@ def info_bar() -> rx.Component:
     return rx.hstack(
         rx.hstack(
             rx.image(src="/agent_avatar.webp", class_name="h-8 w-8"),
-            rx.text(AgentState.agent.name, class_name="text-sm font-semibold"),
+            rx.text(
+                AgentState.agent.name, class_name="text-sm font-semibold", color="white"
+            ),
             rx.badge(AgentState.agent.model_name, class_name="text-xs"),
             spacing="2",
             align="center",
@@ -188,10 +187,11 @@ def messages_area() -> rx.Component:
             rx.cond(
                 ChatState.processing,
                 rx.box(
-                    class_name="ml-3 mt-2 h-4 w-4 animate-spin rounded-full border-b-2 border-current"
+                    class_name="ml-3 mt-2 h-4 w-4 animate-spin rounded-full border-b-2 border-current",
+                    color="white",
                 ),
             ),
-            class_name="flex flex-col gap-2 p-2",  # <--- 这里加 gap-2
+            class_name="flex flex-col gap-2 p-2",
         ),
         scrollbars="vertical",
         class_name="w-full flex-1 min-h-0",
@@ -207,6 +207,7 @@ def input_bar() -> rx.Component:
                 id="prompt_input",
                 class_name="box-border px-4 py-2 pr-14 rounded-full w-full outline-none focus:outline-accent-10 h-[48px] text-slate-12 placeholder:text-slate-9",
                 background_color="#303030",
+                color="white",
             ),
             rx.el.button(
                 rx.cond(

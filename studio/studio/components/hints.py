@@ -19,12 +19,7 @@ def template_card(icon: str, title: str, description: str, color: str) -> rx.Com
 
 def hints() -> rx.Component:
     return rx.box(
-        rx.box(
-            rx.heading(
-                "What can I do for you?",
-                size="7",
-            )
-        ),
+        rx.box(rx.heading("What can I do for you?", size="7", color="white")),
         rx.box(
             template_card(
                 "message-circle",
