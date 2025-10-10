@@ -3,6 +3,7 @@ import reflex as rx
 from studio.pages.agent_page import agent_page
 from studio.pages.build_page import build_page
 from studio.pages.login_page import login_page
+from studio.pages.main_page import main_page
 from studio.pages.welcome_page import welcome_page
 from studio.state import AuthState, ChatState
 
@@ -31,6 +32,14 @@ app.add_page(build_page, route="/build")
 app.add_page(
     agent_page,
     route="/agent",
+    on_load=[
+        ChatState.add_session,
+    ],
+)
+
+app.add_page(
+    main_page,
+    route="/test",
     on_load=[
         ChatState.add_session,
     ],

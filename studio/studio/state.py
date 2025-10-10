@@ -109,7 +109,7 @@ class AgentState(rx.State):
         await self._set_agent_metadata()
 
         # redirect to session page
-        return rx.redirect("/agent")
+        return rx.redirect("/test")
 
     @rx.event
     def update_system_prompt(self, data: dict):
@@ -245,8 +245,7 @@ class ChatState(rx.State):
     evaluation_reason: str = ""
 
     @rx.event
-    def set_prompt(self, prompt: str):
-        self.prompt = prompt
+    def set_user_message(self):
         self.message_list.append(Message(role="user", content=self.prompt))
 
     @rx.event

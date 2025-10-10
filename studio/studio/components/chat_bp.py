@@ -13,7 +13,7 @@ def render_message(message: Message) -> rx.Component:
                 message.content,
                 class_name="[&>p]:!my-2.5",
             ),
-            class_name="relative bg-slate-3 px-5 rounded-3xl max-w-[70%] text-slate-12 self-end",
+            class_name="relative bg-slate-3 px-5 rounded-2xl max-w-[70%] text-slate-12 self-end",
         ),
         rx.cond(
             AuthState.user_avatar_url,
@@ -27,15 +27,6 @@ def render_message(message: Message) -> rx.Component:
 
     assistant_message_ui = rx.box(
         rx.box(
-            rx.box(
-                rx.image(
-                    # src="https://avatar.iran.liara.run/username?username=nihao",
-                    src="/doubao-color.svg",
-                    class_name="h-8 w-8"
-                    + str(rx.cond(ChatState.processing, " animate-pulse", "")),
-                ),
-                class_name="flex items-center",
-            ),
             rx.box(
                 rx.markdown(
                     message.content,
@@ -54,7 +45,7 @@ def render_message(message: Message) -> rx.Component:
                     ),
                     class_name="-bottom-9 left-3 absolute opacity-0 group-hover:opacity-100 transition-opacity justify-between",
                 ),
-                class_name="relative bg-accent-4 px-5 rounded-3xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
+                class_name="relative px-5 rounded-xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
                 on_click=ChatState.get_event(message.event_id),
             ),
             class_name="flex flex-row gap-4",
@@ -132,7 +123,7 @@ def info_bar() -> rx.Component:
         rx.hstack(
             rx.tooltip(
                 rx.button(
-                    rx.icon("plus", size=18),
+                    rx.icon("message-square-plus", size=20, color="white"),
                     on_click=[
                         lambda: ChatState.add_session,
                     ],
@@ -140,15 +131,6 @@ def info_bar() -> rx.Component:
                     variant="ghost",
                 ),
                 content="Create a new session",
-            ),
-            rx.tooltip(
-                rx.button(
-                    rx.icon("cloud-upload", size=18),
-                    on_click=[PageState.open_deploy_dialog],
-                    class_name="cursor-pointer",
-                    variant="ghost",
-                ),
-                content="Deploy to cloud",
             ),
             # rx.button(
             #     rx.icon("settings", size=16),
@@ -160,7 +142,7 @@ def info_bar() -> rx.Component:
             # ),
             spacing="3",
         ),
-        class_name="w-full",
+        class_name="w-full py-2",
         align="center",
         justify="between",
     )
@@ -213,18 +195,24 @@ def input_bar() -> rx.Component:
     )
 
 
+def tips() -> rx.Component:
+    return rx.text(
+        f"VeADK version: 0.2.0 | Current session: {ChatState.session_id}",
+        class_name="text-xs text-slate-9 mx-auto",
+    )
+
+
 def chat() -> rx.Component:
     return rx.vstack(
-        rx.cond(
-            ChatState.message_list,
-            info_bar(),
-        ),
+        info_bar(),
         rx.box(
             messages_area(),
             hints(),
             class_name="relative flex-1 w-full min-h-0",
         ),
         input_bar(),
+        tips(),
         spacing="3",
-        class_name="flex flex-1 w-full min-h-0 h-full",
+        width="50rem",
+        class_name="flex flex-1 min-h-0 h-full mx-auto",
     )

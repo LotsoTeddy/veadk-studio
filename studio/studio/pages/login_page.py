@@ -53,7 +53,11 @@ def login_page() -> rx.Component:
                     width="100%",
                 ),
                 rx.button(
-                    "Start", size="3", width="100%", on_click=rx.redirect("/main")
+                    "Start",
+                    size="3",
+                    width="100%",
+                    on_click=rx.redirect("/main"),
+                    class_name="cursor-pointer",
                 ),
                 rx.hstack(
                     rx.divider(margin="0"),
@@ -73,6 +77,7 @@ def login_page() -> rx.Component:
                     size="3",
                     width="100%",
                     on_click=rx.redirect(github_auth_url),
+                    class_name="cursor-pointer",
                 ),
                 spacing="6",
                 width="100%",

@@ -16,9 +16,7 @@ def hints() -> rx.Component:
     return rx.box(
         rx.box(
             rx.heading(
-                f"Hi, {ChatState.user_id}! ",
-                rx.code(AgentState.agent.name),
-                " is here!",
+                "What can I do for you?",
                 size="7",
             )
         ),
