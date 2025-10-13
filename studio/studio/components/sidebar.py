@@ -3,7 +3,9 @@ from google.adk.sessions import Session
 from studio.components.agent_dialog import agent_dialog
 from studio.components.deploy_dialog import deploy_dialog
 from studio.components.prompt_optimize_dialog import prompt_optimize_dialog
-from studio.state import AuthState, ChatState, PageState
+from studio.states.auth_state import AuthState
+from studio.states.chat_state import MessageState
+from studio.states.page_state import PageState
 
 
 def logo_area() -> rx.Component:
@@ -24,14 +26,18 @@ def option_item(icon: str, title: str, on_click: list = []) -> rx.Component:
     return rx.hstack(
         rx.icon(icon, size=18, color="white"),
         rx.text(title, class_name="text-sm", color="white"),
-        rx.icon(
-            "chevron-right",
-            class_name="ml-auto opacity-0 hover:opacity-100 transition-opacity duration-200",
-            size=18,
-            color="white",
-        ),
+        # rx.icon(
+        #     "chevron-right",
+        #     class_name="ml-auto opacity-0 hover:opacity-100 transition-opacity duration-200",
+        #     size=18,
+        #     color="white",
+        # ),
         align="center",
-        class_name="px-2 py-2 hover:bg-slate-3 rounded-lg cursor-pointer w-full",
+        class_name="px-2 py-2 rounded-lg cursor-pointer w-full",
+        _hover={
+            "background": "#303030",
+            "transition": "background 0.1s",
+        },
         on_click=on_click,
     )
 
@@ -42,7 +48,7 @@ def option_area() -> rx.Component:
         option_item(
             "sparkles", "Prompt", on_click=[PageState.open_prompt_optimize_dialog]
         ),
-        option_item("cloud", "Deploy", on_click=[PageState.open_deploy_dialog]),
+        option_item("upload", "Deploy", on_click=[PageState.open_deploy_dialog]),
         spacing="1",
         width="100%",
     )
@@ -53,15 +59,24 @@ def session_item(session: Session) -> rx.Component:
         rx.vstack(
             rx.text(session.id, class_name="text-sm", color="white"),
             rx.text(
-                f"{ChatState.session_to_timestamp_map[session.id]}",
+                f"{MessageState.session_last_update_time_map[session.id]}",
                 class_name="text-xs text-slate-9",
             ),
             spacing="0",
         ),
-        rx.badge(ChatState.session_to_num_events_map[session.id], class_name="ml-auto"),
+        rx.badge(
+            MessageState.session_events_count_map[session.id], class_name="ml-auto"
+        ),
         align="center",
-        on_click=[ChatState.load_session(session.id)],
-        class_name="px-2 py-2 hover:bg-slate-3 rounded-lg cursor-pointer w-full",
+        on_click=[
+            rx.toast(f"Switch session to {session.id}"),
+            MessageState.load_session(session.id),
+        ],
+        class_name="px-2 py-2 rounded-lg cursor-pointer w-full",
+        _hover={
+            "background": "#303030",
+            "transition": "background 0.1s",
+        },
     )
 
 
@@ -79,7 +94,7 @@ def session_area() -> rx.Component:
         rx.scroll_area(
             rx.vstack(
                 rx.foreach(
-                    ChatState.reversed_sessions,
+                    MessageState.reversed_sessions,
                     lambda session: session_item(session),
                 ),
                 spacing="1",
@@ -103,23 +118,27 @@ def user_area() -> rx.Component:
                 class_name="w-10 h-10 rounded-2xl",
             ),
             rx.avatar(
-                fallback=ChatState.user_id[0].upper(),
+                fallback=MessageState.user_id[0].upper(),
                 color_scheme="indigo",
                 size="3",
             ),
         ),
         rx.vstack(
             rx.text(
-                ChatState.user_id, class_name="text-sm font-semibold", color="white"
+                MessageState.user_id, class_name="text-sm font-semibold", color="white"
             ),
             rx.text(
-                rx.cond(AuthState.user_name, "Github", "Local"),
+                rx.cond(AuthState.user_name, AuthState.user_type, "Local"),
                 class_name="text-xs text-slate-9",
             ),
             spacing="1",
         ),
         align="center",
-        class_name="px-2 py-2 hover:bg-slate-3 rounded-lg cursor-pointer w-full mt-auto",
+        class_name="px-2 py-2 rounded-lg cursor-pointer w-full mt-auto",
+        _hover={
+            "background": "#303030",
+            "transition": "background 0.1s",
+        },
     )
 
 

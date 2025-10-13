@@ -3,8 +3,8 @@ import reflex as rx
 from studio.pages.build_page import build_page
 from studio.pages.login_page import login_page
 from studio.pages.main_page import main_page
-from studio.pages.welcome_page import welcome_page
-from studio.state import AuthState, PageState
+from studio.states.auth_state import AuthState
+from studio.states.page_state import PageState
 
 app = rx.App(
     stylesheets=[
@@ -20,12 +20,6 @@ app.add_page(
     route="/",
 )
 
-app.add_page(
-    welcome_page,
-    title="VeADK Studio - Volcengine Agent Development Kit",
-    route="/welcome",
-)
-
 app.add_page(build_page, route="/build")
 
 app.add_page(
@@ -33,7 +27,6 @@ app.add_page(
     route="/main",
     on_load=[
         PageState.open_choose_agent_dialog,
-        # ChatState.add_session,
     ],
 )
 
@@ -42,8 +35,21 @@ app.add_page(
 def auth_callbacks_github():
     return rx.flex(
         rx.text(
-            "Fetching your account information...",
-            on_mount=[AuthState.on_load],
+            "Fetching your account information from Github ...",
+            on_mount=AuthState.github_auth,
+        ),
+        class_name="flex mx-auto mt-20",
+        align="center",
+        direction="column",
+    )
+
+
+@rx.page(route="/auth/callbacks/ve")
+def auth_callbacks_ve():
+    return rx.flex(
+        rx.text(
+            "Fetching your account information from Volcengine ...",
+            on_mount=AuthState.ve_auth,
         ),
         class_name="flex mx-auto mt-20",
         align="center",

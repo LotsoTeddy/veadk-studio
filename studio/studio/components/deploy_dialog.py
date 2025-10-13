@@ -1,5 +1,6 @@
 import reflex as rx
-from studio.state import AgentState, PageState
+from studio.states.agent_state import AgentState
+from studio.states.page_state import PageState
 
 
 def deploy_dialog() -> rx.Component:
@@ -16,7 +17,7 @@ def deploy_dialog() -> rx.Component:
                     rx.form.field(
                         rx.form.label("Expected application name"),
                         rx.input(
-                            default_value=AgentState.selected_agent,
+                            default_value=AgentState.agent_folder_name,
                             name="vefaas_application_name",
                         ),
                         class_name="w-full",

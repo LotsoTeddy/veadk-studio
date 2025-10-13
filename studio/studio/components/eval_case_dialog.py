@@ -1,5 +1,7 @@
 import reflex as rx
-from studio.state import AgentState, ChatState, PageState
+from studio.states.agent_state import AgentState
+from studio.states.chat_state import MessageState
+from studio.states.page_state import PageState
 
 
 def eval_case_dialog(eval_case_id: str) -> rx.Component:
@@ -19,7 +21,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                         rx.heading("Input", size="3"),
                         rx.scroll_area(
                             rx.text(
-                                ChatState.eval_cases_map[eval_case_id]
+                                MessageState.eval_cases_map[eval_case_id]
                                 .user_content.parts[0]
                                 .text
                             ),
@@ -31,7 +33,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                         rx.heading("Output", size="3"),
                         rx.box(
                             rx.scroll_area(
-                                ChatState.eval_cases_map[eval_case_id]
+                                MessageState.eval_cases_map[eval_case_id]
                                 .final_response.parts[0]
                                 .text
                             ),
@@ -48,7 +50,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                 rx.hstack(
                     rx.text("Judge Model", class_name="text-lg font-semibold"),
                     rx.badge(
-                        ChatState.judge_model_name,
+                        MessageState.judge_model_name,
                         color_scheme="blue",
                         variant="soft",
                         class_name="text-sm font-semibold rounded-full",
@@ -59,7 +61,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                     rx.vstack(
                         rx.heading("Judge Prompt", size="3"),
                         rx.box(
-                            rx.scroll_area(ChatState.judge_model_prompt),
+                            rx.scroll_area(MessageState.judge_model_prompt),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
                         class_name="h-[90%] w-full flex flex-col gap-2 min-h-0",
@@ -68,7 +70,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                         rx.button(
                             "Evaluate",
                             class_name="ml-auto",
-                            on_click=ChatState.evaluate(eval_case_id=eval_case_id),
+                            on_click=MessageState.evaluate(eval_case_id=eval_case_id),
                         ),
                         class_name="h-[10%] w-full items-end justify-end",
                     ),
@@ -81,7 +83,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                 rx.hstack(
                     rx.text("Test Result", class_name="text-lg font-semibold"),
                     rx.badge(
-                        ChatState.evaluation_score,
+                        MessageState.judge_score,
                         color_scheme="green",
                         variant="soft",
                         class_name="text-sm font-semibold rounded-full",
@@ -92,7 +94,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                     rx.vstack(
                         rx.heading("Reason", size="3"),
                         rx.box(
-                            rx.scroll_area(ChatState.evaluation_reason),
+                            rx.scroll_area(MessageState.judge_reason),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
                         class_name="h-[90%] w-full flex flex-col gap-2 min-h-0",
@@ -102,8 +104,8 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                             "Optimize",
                             class_name="ml-auto",
                             on_click=[
-                                lambda: AgentState.set_feedback(
-                                    ChatState.evaluation_reason
+                                lambda: AgentState.set_optimize_feedback(  # type: ignore
+                                    MessageState.judge_reason
                                 ),
                                 PageState.open_prompt_optimize_dialog,
                             ],

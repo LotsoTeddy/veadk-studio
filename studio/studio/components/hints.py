@@ -1,5 +1,5 @@
 import reflex as rx
-from studio.state import ChatState
+from studio.states.chat_state import MessageState
 
 
 def template_card(icon: str, title: str, description: str, color: str) -> rx.Component:
@@ -7,13 +7,19 @@ def template_card(icon: str, title: str, description: str, color: str) -> rx.Com
         rx.icon(tag=icon, color=rx.color(color, 9), size=16),  # type: ignore
         rx.text(title, class_name="font-medium text-slate-11 text-sm"),
         rx.text(description, class_name="text-slate-10 text-xs"),
-        class_name="relative align-top flex flex-col gap-2 border-slate-4 hover:bg-slate-3 shadow-sm px-3 pt-3 pb-4 border rounded-2xl text-[15px] text-start transition-colors cursor-pointer",
-        background_color="#303030",
+        class_name="relative align-top flex flex-col gap-2 border-gray-300 px-3 pt-3 pb-4 border rounded-2xl text-[15px] text-start transition-colors cursor-pointer",
         on_click=[
-            ChatState.set_prompt(description),  # type: ignore
-            ChatState.set_user_message,
-            ChatState.generate,
+            MessageState.set_prompt(description),  # type: ignore
+            MessageState.set_user_message,
+            MessageState.generate,
         ],
+        border_width="1px",
+        border_color="#3a3a3a",
+        background_color="#1e1e1e",
+        _hover={
+            "background": "#2a2a2a",
+            "transition": "background 0.25s ease",
+        },
     )
 
 
@@ -52,5 +58,5 @@ def hints() -> rx.Component:
             "animation": "reveal 0.35s ease-out",
             "@keyframes reveal": {"0%": {"opacity": "0"}, "100%": {"opacity": "1"}},
         },
-        display=rx.cond(ChatState.message_list, "none", "flex"),
+        display=rx.cond(MessageState.message_list, "none", "flex"),
     )

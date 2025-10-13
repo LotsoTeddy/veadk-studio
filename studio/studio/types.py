@@ -17,3 +17,14 @@ class Message(BaseModel):
     tool_response: str = ""
     event_id: str = ""
     invocation_id: str = ""
+    image: str = ""
+
+
+class AgentInfo(BaseModel):
+    tools: list[str] = []
+
+    knowledgebase_backend: str = ""
+
+    short_term_memory_backend: str = ""
+
+    long_term_memory_backend: str = ""

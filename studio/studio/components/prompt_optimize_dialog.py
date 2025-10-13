@@ -1,5 +1,6 @@
 import reflex as rx
-from studio.state import AgentState, PageState
+from studio.states.agent_state import AgentState
+from studio.states.page_state import PageState
 
 
 def prompt_optimize_dialog() -> rx.Component:
@@ -19,7 +20,7 @@ def prompt_optimize_dialog() -> rx.Component:
                                 "System prompt", class_name="text-lg font-semibold mb-3"
                             ),
                             rx.text_area(
-                                default_value=AgentState.system_prompt,
+                                # value=str(AgentState.agent.instruction),
                                 name="instruction",
                                 class_name=(
                                     "w-full h-full min-h-0 resize-none overflow-y-auto "
@@ -33,7 +34,7 @@ def prompt_optimize_dialog() -> rx.Component:
                             class_name="h-[10%] w-full items-end justify-end",
                         ),
                         class_name="h-full flex flex-col min-h-0",
-                        on_submit=AgentState.update_system_prompt,
+                        on_submit=AgentState.set_system_prompt,
                     ),
                     class_name="w-1/3 h-full flex flex-col gap-4 min-h-0 shadow-sm p-4",
                 ),
@@ -70,7 +71,7 @@ def prompt_optimize_dialog() -> rx.Component:
                                 "Final prompt", class_name="text-lg font-semibold mb-3"
                             ),
                             rx.text_area(
-                                default_value=AgentState.optimized_prompt,
+                                default_value=AgentState.optimize_prompt,
                                 name="optimized_prompt",
                                 class_name=(
                                     "w-full h-full min-h-0 resize-none overflow-y-auto "

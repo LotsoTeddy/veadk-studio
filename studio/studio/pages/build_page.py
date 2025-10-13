@@ -1,5 +1,4 @@
 import reflex as rx
-from studio.state import AgentBuildConfig
 
 
 def agent_form() -> rx.Component:

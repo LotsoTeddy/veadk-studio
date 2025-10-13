@@ -1,5 +1,6 @@
 import reflex as rx
-from studio.state import AgentState, PageState
+from studio.states.agent_state import AgentState
+from studio.states.page_state import PageState
 
 
 def agent_dialog() -> rx.Component:
@@ -29,29 +30,33 @@ def agent_dialog() -> rx.Component:
                         rx.data_list.value(AgentState.agent.instruction),
                     ),
                     rx.cond(
-                        AgentState.short_term_memory_backend,
+                        AgentState.agent_info.short_term_memory_backend,
                         rx.data_list.item(
                             rx.data_list.label("Short-term memory backend"),
                             rx.data_list.value(
-                                rx.badge(AgentState.short_term_memory_backend),
+                                rx.badge(
+                                    AgentState.agent_info.short_term_memory_backend
+                                ),
                             ),
                         ),
                     ),
                     rx.cond(
-                        AgentState.long_term_memory_backend,
+                        AgentState.agent_info.long_term_memory_backend,
                         rx.data_list.item(
                             rx.data_list.label("Long-term memory backend"),
                             rx.data_list.value(
-                                rx.badge(AgentState.long_term_memory_backend),
+                                rx.badge(
+                                    AgentState.agent_info.long_term_memory_backend
+                                ),
                             ),
                         ),
                     ),
                     rx.cond(
-                        AgentState.knowledgebase_backend,
+                        AgentState.agent_info.knowledgebase_backend,
                         rx.data_list.item(
                             rx.data_list.label("Knowledgebase backend"),
                             rx.data_list.value(
-                                rx.badge(AgentState.knowledgebase_backend),
+                                rx.badge(AgentState.agent_info.knowledgebase_backend),
                             ),
                         ),
                     ),
@@ -62,7 +67,8 @@ def agent_dialog() -> rx.Component:
                             rx.data_list.value(
                                 rx.hstack(
                                     rx.foreach(
-                                        AgentState.tools, lambda tool: rx.badge(tool)
+                                        AgentState.agent_info.tools,
+                                        lambda tool: rx.badge(tool),
                                     ),
                                     spacing="2",
                                 ),

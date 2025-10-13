@@ -1,5 +1,4 @@
 import reflex as rx
-from fastapi import background
 from studio.components.chat import chat
 from studio.components.choose_agent_dialog import choose_agent_dialog
 from studio.components.sidebar import sidebar

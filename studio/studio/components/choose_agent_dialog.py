@@ -1,17 +1,19 @@
 import reflex as rx
-from studio.state import AgentState, ChatState, PageState
+from studio.states.agent_state import AgentState
+from studio.states.chat_state import MessageState
+from studio.states.page_state import PageState
 
 
 def select_agents() -> rx.Component:
     return rx.select(
         AgentState.list_agents,
         placeholder="Choose local agent",
-        value=AgentState.selected_agent,
+        value=AgentState.agent_folder_name,
         on_change=[
-            AgentState.set_agent,
-            ChatState.set_app_name,
+            AgentState.set_agent,  # type: ignore
+            MessageState.set_app_name,  # type: ignore
+            MessageState.add_session,
             PageState.close_choose_agent_dialog,
-            ChatState.add_session,
         ],
     )
 
@@ -28,5 +30,4 @@ def choose_agent_dialog() -> rx.Component:
             select_agents(),
         ),
         open=PageState.choose_agent_dialog_flag,
-        on_open_change=PageState.set_choose_agent_dialog_flag,
     )

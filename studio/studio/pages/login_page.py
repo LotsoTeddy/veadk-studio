@@ -1,16 +1,9 @@
 import reflex as rx
-from studio.consts import GITHUB_CLIENT_ID
-from studio.state import ChatState
+from studio.consts import GITHUB_OAUTH_URL, VE_OAUTH_URL
+from studio.states.chat_state import MessageState
 
 
 def login_page() -> rx.Component:
-    github_auth_url = (
-        f"https://github.com/login/oauth/authorize"
-        f"?client_id={GITHUB_CLIENT_ID}"
-        f"&redirect_uri=http://localhost:3000/auth/callbacks/github"
-        f"&scope=read:user"
-    )
-
     return rx.flex(
         rx.card(
             rx.vstack(
@@ -43,8 +36,8 @@ def login_page() -> rx.Component:
                     ),
                     rx.input(
                         rx.input.slot(rx.icon("user")),
-                        value=ChatState.user_id,
-                        on_change=ChatState.set_user_id,  # type: ignore
+                        value=MessageState.user_id,
+                        on_change=MessageState.set_user_id,  # type: ignore
                         size="3",
                         width="100%",
                     ),
@@ -76,7 +69,16 @@ def login_page() -> rx.Component:
                     variant="outline",
                     size="3",
                     width="100%",
-                    on_click=rx.redirect(github_auth_url),
+                    on_click=rx.redirect(GITHUB_OAUTH_URL),
+                    class_name="cursor-pointer",
+                ),
+                rx.button(
+                    rx.icon(tag="key-round"),
+                    "Sign in with Volcengine",
+                    variant="outline",
+                    size="3",
+                    width="100%",
+                    on_click=rx.redirect(VE_OAUTH_URL),
                     class_name="cursor-pointer",
                 ),
                 spacing="6",
