@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import os
 import uuid
 from datetime import datetime
@@ -16,18 +17,32 @@ from google.genai.types import Blob, Content, Part
 from veadk.evaluation.deepeval_evaluator.deepeval_evaluator import DeepevalEvaluator
 from veadk.memory import ShortTermMemory
 from veadk.utils.logger import get_logger
-from veadk.utils.misc import formatted_timestamp, read_png_to_bytes
+from veadk.utils.misc import formatted_timestamp
 
 from studio.states import agent_state
 from studio.states.agent_state import AgentState
 from studio.types import Message
+from studio.utils.misc import extract_mime_type, image_base64_to_bytes, image_to_base64
 
 logger = get_logger(__name__)
 
 
-def event_to_message(event: Event) -> Message | None:
+def event_to_messages(event: Event) -> Message | list[Message] | None:
     if event.author == "user":
-        return Message(role="user", content=event.content.parts[0].text)  # type: ignore
+        if event.content and event.content.parts:
+            _messages: list[Message] = []
+            for part in event.content.parts:
+                if part.text:
+                    _messages.append(Message(role="user", content=part.text))
+                if (
+                    part.inline_data
+                    and part.inline_data.data
+                    and part.inline_data.mime_type
+                ):
+                    image_bytes = part.inline_data.data
+                    image_base64_str = f"data:{part.inline_data.mime_type};base64,{base64.b64encode(image_bytes).decode('utf-8')}"
+                    _messages.append(Message(role="user", image=image_base64_str))
+            return _messages
 
     if event.get_function_calls():
         for function_call in event.get_function_calls():
@@ -82,11 +97,17 @@ async def get_session(
     return session
 
 
-class MessageState(rx.State):
-    """
-    States for session management
-    """
+async def update_session_attrs(state: rx.State):
+    session_state = await state.get_state(SessionState)
+    eval_state = await state.get_state(EvalState)
 
+    await session_state.update_session_events_count_map()
+    await session_state.update_session_last_update_time_map()
+
+    await eval_state.update_eval_cases()
+
+
+class SessionState(rx.State):
     app_name: str
     """One of Google ADK attributes"""
 
@@ -110,50 +131,6 @@ class MessageState(rx.State):
 
     event_content: str = "No event selected."
     """The currently selected event content"""
-
-    """
-    States for message management
-    """
-
-    prompt: str
-    """User's latest prompt"""
-
-    prompt_images: list[str] = []
-    """User's latest prompt images (file names)"""
-
-    processing: bool = False
-    """Whether processing user's prompt"""
-
-    message_list: list[Message]
-    """History message list in current session"""
-
-    """
-    States for evaluation
-    """
-
-    eval_cases: list[Invocation] = []
-    """Invocations of the Google ADK Evalcase.
-
-    Structure:
-    - ADKEvalset
-        - eval_cases: list[ADKEvalcase]
-            - conversation: list[Invocation] --> eval_cases here
-    """
-
-    eval_cases_map: dict[str, Invocation] = {}
-    """Map from invocation id to invocation"""
-
-    judge_model_name: str = "doubao-seed-1-6-250615"
-
-    judge_model_prompt: str = "You are a judger for model response."
-
-    judge_score: str = ""
-
-    judge_reason: str = ""
-
-    """
-    Methods for session management
-    """
 
     @rx.event
     async def add_session(self):
@@ -194,16 +171,7 @@ class MessageState(rx.State):
         logger.info(f"Get session with session_id={session.id}")
         logger.info(f"Session has {len(session.events)} events")
 
-        # Step 1: update message list
-        message_state = await self.get_state(MessageState)
-        message_state.load_message_list(session)
-
-        # Step 2: update session to num events map & timestamp map
-        await self.update_session_events_count_map()
-        await self.update_session_last_update_time_map()
-
-        # Step 3: update eval cases
-        await self.update_eval_cases()
+        await self._update_states()
 
     @rx.event
     def load_event(self, event_id: str):
@@ -230,9 +198,18 @@ class MessageState(rx.State):
             self.sessions = []
 
     @rx.event
+    async def save_session(self):
+        pass
+
+        # yield rx.toast(...)
+
+    @rx.event
     async def update_session_events_count_map(self):
         logger.debug("Update session events count map.")
 
+        assert (
+            agent_state.runner and agent_state.runner.short_term_memory is not None
+        ), "Runner or short term memory is not initialized."
         session = await get_session(
             self.app_name,
             self.user_id,
@@ -247,6 +224,9 @@ class MessageState(rx.State):
     async def update_session_last_update_time_map(self):
         logger.debug("Update session last update time map.")
 
+        assert (
+            agent_state.runner and agent_state.runner.short_term_memory is not None
+        ), "Runner or short term memory is not initialized."
         session = await get_session(
             self.app_name,
             self.user_id,
@@ -267,35 +247,73 @@ class MessageState(rx.State):
     def num_sessions(self) -> int:
         return len(self.sessions)
 
-    """
-    Methods for message management
-    """
+    async def _update_states(self) -> None:
+        # Step 1: update message list
+        session = self.session
+        message_state = await self.get_state(MessageState)
+        message_state.load_message_list(session)
+
+        # Step 2: update session attributes
+        await self.update_session_events_count_map()
+        await self.update_session_last_update_time_map()
+
+        # Step 3: update eval cases
+        eval_state = await self.get_state(EvalState)
+        await eval_state.update_eval_cases()
+
+
+class MessageState(rx.State):
+    user_message_text: str = ""
+    """User's latest message text. We donot direcrly use `prompt` because the user interface cannot render user message imediately after user click send button."""
+
+    user_message_text_draft: str
+    """Temporary prompt storage for input box value binding. After user click send button, the prompt will be moved to `user_message_text`."""
+
+    user_message_images: list[str] = []
+    """User's latest message images (file names)"""
+
+    user_message_images_draft: list[str] = []
+    """User's latest message images preview in user's input box. The data is base64 encoded string."""
+
+    processing: bool = False
+    """Whether processing user's prompt"""
+
+    message_list: list[Message]
+    """History message list in current session"""
 
     @rx.event
     def set_user_message(self):
-        self.message_list.append(Message(role="user", content=self.prompt))
+        self.message_list.append(
+            Message(role="user", content=self.user_message_text_draft)
+        )
+        self.user_message_text = self.user_message_text_draft
 
-        for prompt_image in self.prompt_images:
+        for prompt_image in self.user_message_images_draft:
+            self.user_message_images.append(prompt_image)
+
             self.message_list.append(Message(role="user", image=prompt_image))
 
+        # clear draft data
+        self.user_message_text_draft = ""
+        self.user_message_images_draft = []
+
     @rx.event
-    async def set_user_images(self, files: list[rx.UploadFile]):
+    async def set_user_message_images_draft(self, files: list[rx.UploadFile]):
         for file in files:
             data = await file.read()
             if file.name:
-                path = rx.get_upload_dir() / file.name
-                with path.open("wb") as f:
-                    f.write(data)
-                logger.debug(f"Save uploaded file to {str(path.absolute())}")
-                self.prompt_images.append(file.name)
+                base64_str = image_to_base64(filename=file.name, data=data)
+                self.user_message_images_draft.append(base64_str)
 
     @rx.event
     def load_message_list(self, session: Session):
         _message_list: list[Message] = []
         for event in session.events:
-            message = event_to_message(event)
+            message = event_to_messages(event)
             if message:
-                _message_list.append(message)
+                _message_list.append(message) if isinstance(
+                    message, Message
+                ) else _message_list.extend(message)
         self.message_list = _message_list
 
     @rx.event
@@ -305,7 +323,7 @@ class MessageState(rx.State):
         We need to process the following message:
         - User message:
           - Text
-          - TODO(yaozheng): Image
+          - Image
         - Agent message:
           - Text
           - Function call
@@ -318,58 +336,107 @@ class MessageState(rx.State):
         self.processing = True
         yield
 
+        session_state = await self.get_state(SessionState)
+        user_id = session_state.session.user_id
+        session_id = session_state.session.id
+
         logger.debug(
-            f"Begin generate, app_name: {agent_state.runner.app_name}, user_id: {self.user_id}, session_id: {self.session_id}"
+            f"Begin generate, app_name: {agent_state.runner.app_name}, user_id: {user_id}, session_id: {session_id}"
         )
 
-        user_parts = [Part(text=self.prompt)]
-        for image_path in self.prompt_images:
-            image_data = read_png_to_bytes(str(rx.get_upload_dir() / image_path))
-            if image_data:
-                user_parts.append(
-                    Part(inline_data=Blob(data=image_data, mime_type="image/png"))
+        # Build user message parts
+        # 1. Text part
+        user_parts = [Part(text=self.user_message_text)]
+        # 2. Image parts if any
+        for image_base64_str in self.user_message_images:
+            user_parts.append(
+                Part(
+                    inline_data=Blob(
+                        data=image_base64_to_bytes(image_base64_str),
+                        mime_type=extract_mime_type(image_base64_str),
+                    )
                 )
-            os.remove(str(rx.get_upload_dir() / image_path))
+            )
+        # 3. Build content
         new_message = Content(parts=user_parts, role="user")
 
         try:
-            async for event in agent_state.runner.run_async(  # type: ignore
-                user_id=self.user_id,
-                session_id=self.session_id,
+            async for event in agent_state.runner.run_async(
+                user_id=user_id,
+                session_id=session_id,
                 new_message=new_message,
             ):
-                message = event_to_message(event)
+                message = event_to_messages(event)
                 if message:
-                    self.message_list.append(message)
+                    self.message_list.append(message) if isinstance(
+                        message, Message
+                    ) else self.message_list.extend(message)
                     yield
         except Exception as e:
             message = Message(role="assistant", content=str(e))
             yield
 
-        self.prompt = ""
-
-        await self.update_session_events_count_map()
-        await self.update_session_last_update_time_map()
-
-        await self.update_eval_cases()
+        self._clear_user_input_message()
+        await self._update_states()
 
         self.processing = False
 
         logger.debug("Generate done.")
 
+    def _clear_user_input_message(self) -> None:
+        self.user_message_text = ""
+        self.user_message_images = []
+
+    async def _update_states(self) -> None:
+        session_state = await self.get_state(SessionState)
+        await session_state.update_session_events_count_map()
+        await session_state.update_session_last_update_time_map()
+
+        eval_state = await self.get_state(EvalState)
+        await eval_state.update_eval_cases()
+
+
+class EvalState(rx.State):
+    eval_cases: list[Invocation] = []
+    """Invocations of the Google ADK Evalcase.
+
+    Structure:
+    - ADKEvalset
+        - eval_cases: list[ADKEvalcase]
+            - conversation: list[Invocation] --> eval_cases here
     """
-    Methods for evaluation
-    """
+
+    eval_cases_map: dict[str, Invocation] = {}
+    """Map from invocation id to invocation"""
+
+    judge_model_name: str = "doubao-seed-1-6-250615"
+
+    judge_model_prompt: str = "You are a judger for model response."
+
+    evaluating: bool = False
+
+    judge_score: str = ""
+
+    judge_reason: str = ""
 
     @rx.event
     async def update_eval_cases(self):
+        logger.debug("Update eval cases.")
+
+        session_state = await self.get_state(SessionState)
+        app_name = session_state.app_name
+        user_id = session_state.user_id
+        session_id = session_state.session_id
+
+        assert (
+            agent_state.runner and agent_state.runner.short_term_memory is not None
+        ), "Runner or short term memory is not initialized."
         session = await get_session(
-            self.app_name,
-            self.user_id,
-            self.session_id,
+            app_name,
+            user_id,
+            session_id,
             agent_state.runner.short_term_memory,
         )
-        self.session = session
 
         logger.debug(f"Update eval case with session id {session.id}")
 
@@ -383,18 +450,25 @@ class MessageState(rx.State):
     async def evaluate(self, eval_case_id: str):
         logger.debug("Start to evaluate.")
 
+        self.evaluating = True
+        yield
+
         invocation = self.eval_cases_map.get(eval_case_id)
         if not invocation:
             logger.error(f"Get eval case failed (eval_case_id={eval_case_id})")
 
         logger.debug("Start to prepare evaluation set.")
 
+        session_state = await self.get_state(SessionState)
+        app_name = session_state.app_name
+        user_id = session_state.user_id
+
         _eval_case = ADKEvalCase(
             eval_id=f"eval_{formatted_timestamp()}",
             conversation=[invocation],  # type: ignore
             session_input=SessionInput(
-                app_name=self.app_name,
-                user_id=self.user_id,
+                app_name=app_name,
+                user_id=user_id,
                 state={},
             ),
             creation_timestamp=0.0,
@@ -446,3 +520,6 @@ class MessageState(rx.State):
 
         self.judge_score = str(evaluator.result_list[0].average_score)
         self.judge_reason = evaluator.result_list[0].total_reason
+
+        self.evaluating = False
+        yield

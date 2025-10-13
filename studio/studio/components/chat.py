@@ -3,7 +3,7 @@ from studio.components.eval_case_dialog import eval_case_dialog
 from studio.components.event_drawer import event_drawer
 from studio.components.hints import hints
 from studio.states.agent_state import AgentState
-from studio.states.chat_state import MessageState
+from studio.states.chat_state import EvalState, MessageState, SessionState
 from studio.states.page_state import PageState
 from studio.types import Message
 
@@ -13,9 +13,7 @@ def render_message(message: Message) -> rx.Component:
         rx.box(
             rx.cond(
                 message.image,
-                rx.image(
-                    src=rx.get_upload_url(message.image), class_name="rounded-lg py-3"
-                ),
+                rx.image(src=message.image, class_name="rounded-lg py-3"),
                 rx.markdown(message.content, class_name="[&>p]:!my-2.5", color="white"),
             ),
             class_name="relative px-3 rounded-2xl max-w-[70%] text-white self-end",
@@ -33,7 +31,7 @@ def render_message(message: Message) -> rx.Component:
                             message.content,
                             class_name="[&>p]:!my-2.5 text-white",
                             on_click=[
-                                MessageState.load_event(message.event_id),
+                                SessionState.load_event(message.event_id),
                                 PageState.open_event_drawer,
                             ],
                             color="white",
@@ -45,7 +43,7 @@ def render_message(message: Message) -> rx.Component:
                     on_open_change=PageState.close_event_drawer,
                 ),
                 class_name="px-3 rounded-xl max-w-[100%] text-white self-start hover:bg-slate-2 cursor-pointer",
-                on_click=MessageState.load_event(message.event_id),
+                on_click=SessionState.load_event(message.event_id),
                 _hover={
                     "background": "#323232d9",
                     "transition": "background 0.25s ease",
@@ -84,10 +82,25 @@ def render_message(message: Message) -> rx.Component:
                         ),
                     ),
                     rx.cond(
-                        MessageState.eval_cases_map[message.invocation_id],
+                        EvalState.eval_cases_map[message.invocation_id],
                         eval_case_dialog(eval_case_id=message.invocation_id),
                     ),
                     class_name="min-h-0",
+                ),
+                rx.menu.root(
+                    rx.menu.trigger(
+                        rx.el.button(
+                            rx.icon(tag="ellipsis", size=18),
+                            class_name="p-1 text-slate-10 hover:text-slate-11 transform transition-colors cursor-pointer",
+                        ),
+                    ),
+                    rx.menu.content(
+                        rx.menu.item(
+                            "Add to CozeLoop dataset",
+                            on_click=[rx.toast("Not implemented")],
+                        ),
+                        size="1",
+                    ),
                 ),
                 class_name="px-3 gap-2",
             ),
@@ -103,7 +116,7 @@ def render_message(message: Message) -> rx.Component:
                         f"**Call `{message.tool_name}`**",
                         class_name="[&>p]:!my-2.5 text-white",
                         on_click=[
-                            MessageState.load_event(message.event_id),
+                            SessionState.load_event(message.event_id),
                             PageState.open_event_drawer,
                         ],
                         color="white",
@@ -115,7 +128,7 @@ def render_message(message: Message) -> rx.Component:
                 on_open_change=PageState.close_event_drawer,
             ),
             class_name="relative px-3 rounded-xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
-            on_click=MessageState.load_event(message.event_id),
+            on_click=SessionState.load_event(message.event_id),
             _hover={
                 "background": "#323232d9",
                 "transition": "background 0.25s ease",
@@ -132,7 +145,7 @@ def render_message(message: Message) -> rx.Component:
                         f"**Call `{message.tool_name}` done**",
                         class_name="[&>p]:!my-2.5 text-white",
                         on_click=[
-                            MessageState.load_event(message.event_id),
+                            SessionState.load_event(message.event_id),
                             PageState.open_event_drawer,
                         ],
                         color="white",
@@ -144,7 +157,7 @@ def render_message(message: Message) -> rx.Component:
                 on_open_change=PageState.close_event_drawer,
             ),
             class_name="relative px-3 rounded-xl max-w-[70%] text-slate-12 self-start hover:bg-slate-2 cursor-pointer",
-            on_click=MessageState.load_event(message.event_id),
+            on_click=SessionState.load_event(message.event_id),
             _hover={
                 "background": "#323232d9",
                 "transition": "background 0.25s ease",
@@ -179,8 +192,8 @@ def info_bar() -> rx.Component:
                 rx.button(
                     rx.icon("message-square-plus", size=20, color="white"),
                     on_click=[
-                        lambda: MessageState.add_session,
-                        rx.toast(f"Switch session to {MessageState.session_id}"),
+                        lambda: SessionState.add_session,
+                        rx.toast(f"Switch session to {SessionState.session_id}"),
                     ],
                     class_name="cursor-pointer",
                     variant="ghost",
@@ -209,7 +222,7 @@ def info_bar() -> rx.Component:
 
 
 def messages_area() -> rx.Component:
-    return rx.scroll_area(
+    return rx.auto_scroll(
         rx.box(
             rx.foreach(
                 MessageState.message_list,
@@ -222,7 +235,7 @@ def messages_area() -> rx.Component:
                     color="white",
                 ),
             ),
-            class_name="flex flex-col gap-2 p-2 w-1/2 mx-auto",
+            class_name="flex flex-col gap-2 py-2 w-1/2 mx-auto",
         ),
         scrollbars="vertical",
         class_name="w-full flex-1 min-h-0",
@@ -270,11 +283,9 @@ def messages_area() -> rx.Component:
 #     )
 
 
-def image_box(image_path: str) -> rx.Component:
+def image_box(image_base64_str: str) -> rx.Component:
     return rx.box(
-        rx.image(
-            src=rx.get_upload_url(image_path), class_name="h-20 w-20 cursor-pointer"
-        ),
+        rx.image(src=image_base64_str, class_name="h-20 w-20 cursor-pointer"),
         class_name="rounded-lg overflow-hidden flex-shrink-0",
     )
 
@@ -283,11 +294,11 @@ def input_bar() -> rx.Component:
     return rx.vstack(
         # image area
         rx.cond(
-            MessageState.prompt_images,
+            MessageState.user_message_images_draft,
             rx.hstack(
                 rx.foreach(
-                    MessageState.prompt_images,
-                    lambda image_path: image_box(image_path),
+                    MessageState.user_message_images_draft,
+                    lambda image_base64_str: image_box(image_base64_str),
                 ),
                 spacing="2",
                 class_name="min-w-0 overflow-x-auto py-1",
@@ -304,7 +315,7 @@ def input_bar() -> rx.Component:
                         background="transparent",
                     ),
                     id="user_images_upload",
-                    on_drop=MessageState.set_user_images(
+                    on_drop=MessageState.set_user_message_images_draft(
                         rx.upload_files(upload_id="user_images_upload")  # type: ignore
                     ),
                 )
@@ -313,7 +324,7 @@ def input_bar() -> rx.Component:
             rx.box(
                 rx.el.textarea(
                     placeholder="Ask anything",
-                    on_change=MessageState.set_prompt,  # type: ignore
+                    on_change=MessageState.set_user_message_text_draft,  # type: ignore
                     id="prompt_input",
                     width="100%",
                     color="white",
@@ -358,7 +369,8 @@ def input_bar() -> rx.Component:
                     ],
                     class_name="rounded-xl cursor-pointer disabled:opacity-50 disabled:cursor-default",
                     disabled=rx.cond(
-                        MessageState.processing | (MessageState.prompt == ""),
+                        MessageState.processing
+                        | (MessageState.user_message_text_draft == ""),
                         True,
                         False,
                     ),
@@ -379,7 +391,7 @@ def input_bar() -> rx.Component:
 
 def tips() -> rx.Component:
     return rx.text(
-        f"VeADK {AgentState.veadk_version} | Session {MessageState.session_id}",
+        f"VeADK {AgentState.veadk_version} | Session {SessionState.session_id}",
         class_name="text-xs text-slate-9 mx-auto",
     )
 

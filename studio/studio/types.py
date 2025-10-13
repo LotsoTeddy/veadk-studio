@@ -11,13 +11,21 @@ class EvalCase(BaseModel):
 
 class Message(BaseModel):
     role: Literal["user", "assistant", "tool_call", "tool_response"]
+
     content: str = ""
+
     tool_name: str = ""
+
     tool_args: str = ""
+
     tool_response: str = ""
+
     event_id: str = ""
+
     invocation_id: str = ""
+
     image: str = ""
+    """Image base64 string."""
 
 
 class AgentInfo(BaseModel):

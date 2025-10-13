@@ -1,5 +1,5 @@
 import reflex as rx
-from studio.states.chat_state import MessageState
+from studio.states.chat_state import MessageState, SessionState
 
 
 def event_drawer() -> rx.Component:
@@ -8,7 +8,7 @@ def event_drawer() -> rx.Component:
             rx.text("Event details", class_name="text-lg font-medium", color="white"),
             rx.scroll_area(
                 rx.markdown(
-                    f"```json\n{MessageState.event_content}\n```",
+                    f"```json\n{SessionState.event_content}\n```",
                 ),
                 background="inherit",
             ),

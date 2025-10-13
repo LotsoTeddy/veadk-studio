@@ -9,7 +9,7 @@ def template_card(icon: str, title: str, description: str, color: str) -> rx.Com
         rx.text(description, class_name="text-slate-10 text-xs"),
         class_name="relative align-top flex flex-col gap-2 border-gray-300 px-3 pt-3 pb-4 border rounded-2xl text-[15px] text-start transition-colors cursor-pointer",
         on_click=[
-            MessageState.set_prompt(description),  # type: ignore
+            MessageState.set_user_message_text_draft(description),  # type: ignore
             MessageState.set_user_message,
             MessageState.generate,
         ],

@@ -4,7 +4,7 @@ from studio.components.agent_dialog import agent_dialog
 from studio.components.deploy_dialog import deploy_dialog
 from studio.components.prompt_optimize_dialog import prompt_optimize_dialog
 from studio.states.auth_state import AuthState
-from studio.states.chat_state import MessageState
+from studio.states.chat_state import MessageState, SessionState
 from studio.states.page_state import PageState
 
 
@@ -59,18 +59,18 @@ def session_item(session: Session) -> rx.Component:
         rx.vstack(
             rx.text(session.id, class_name="text-sm", color="white"),
             rx.text(
-                f"{MessageState.session_last_update_time_map[session.id]}",
+                f"{SessionState.session_last_update_time_map[session.id]}",
                 class_name="text-xs text-slate-9",
             ),
             spacing="0",
         ),
         rx.badge(
-            MessageState.session_events_count_map[session.id], class_name="ml-auto"
+            SessionState.session_events_count_map[session.id], class_name="ml-auto"
         ),
         align="center",
         on_click=[
+            SessionState.load_session(session.id),
             rx.toast(f"Switch session to {session.id}"),
-            MessageState.load_session(session.id),
         ],
         class_name="px-2 py-2 rounded-lg cursor-pointer w-full",
         _hover={
@@ -94,7 +94,7 @@ def session_area() -> rx.Component:
         rx.scroll_area(
             rx.vstack(
                 rx.foreach(
-                    MessageState.reversed_sessions,
+                    SessionState.reversed_sessions,
                     lambda session: session_item(session),
                 ),
                 spacing="1",
@@ -118,14 +118,14 @@ def user_area() -> rx.Component:
                 class_name="w-10 h-10 rounded-2xl",
             ),
             rx.avatar(
-                fallback=MessageState.user_id[0].upper(),
+                fallback=SessionState.user_id[0].upper(),
                 color_scheme="indigo",
                 size="3",
             ),
         ),
         rx.vstack(
             rx.text(
-                MessageState.user_id, class_name="text-sm font-semibold", color="white"
+                SessionState.user_id, class_name="text-sm font-semibold", color="white"
             ),
             rx.text(
                 rx.cond(AuthState.user_name, AuthState.user_type, "Local"),

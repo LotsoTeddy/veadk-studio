@@ -1,6 +1,6 @@
 import reflex as rx
 from studio.states.agent_state import AgentState
-from studio.states.chat_state import MessageState
+from studio.states.chat_state import EvalState, MessageState
 from studio.states.page_state import PageState
 
 
@@ -21,8 +21,8 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                         rx.heading("Input", size="3"),
                         rx.scroll_area(
                             rx.text(
-                                MessageState.eval_cases_map[eval_case_id]
-                                .user_content.parts[0]
+                                EvalState.eval_cases_map[eval_case_id]
+                                .user_content.parts[0]  # type: ignore
                                 .text
                             ),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
@@ -33,8 +33,8 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                         rx.heading("Output", size="3"),
                         rx.box(
                             rx.scroll_area(
-                                MessageState.eval_cases_map[eval_case_id]
-                                .final_response.parts[0]
+                                EvalState.eval_cases_map[eval_case_id]
+                                .final_response.parts[0]  # type: ignore
                                 .text
                             ),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
@@ -50,7 +50,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                 rx.hstack(
                     rx.text("Judge Model", class_name="text-lg font-semibold"),
                     rx.badge(
-                        MessageState.judge_model_name,
+                        EvalState.judge_model_name,
                         color_scheme="blue",
                         variant="soft",
                         class_name="text-sm font-semibold rounded-full",
@@ -61,16 +61,25 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                     rx.vstack(
                         rx.heading("Judge Prompt", size="3"),
                         rx.box(
-                            rx.scroll_area(MessageState.judge_model_prompt),
+                            rx.scroll_area(EvalState.judge_model_prompt),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
                         class_name="h-[90%] w-full flex flex-col gap-2 min-h-0",
                     ),
                     rx.flex(
                         rx.button(
-                            "Evaluate",
+                            rx.cond(
+                                EvalState.evaluating,
+                                rx.spinner(size="1"),
+                                "Evaluate",
+                            ),
+                            disabled=rx.cond(
+                                EvalState.evaluating,
+                                True,
+                                False,
+                            ),
                             class_name="ml-auto",
-                            on_click=MessageState.evaluate(eval_case_id=eval_case_id),
+                            on_click=EvalState.evaluate(eval_case_id=eval_case_id),  # type: ignore
                         ),
                         class_name="h-[10%] w-full items-end justify-end",
                     ),
@@ -82,11 +91,14 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
             rx.card(
                 rx.hstack(
                     rx.text("Test Result", class_name="text-lg font-semibold"),
-                    rx.badge(
-                        MessageState.judge_score,
-                        color_scheme="green",
-                        variant="soft",
-                        class_name="text-sm font-semibold rounded-full",
+                    rx.cond(
+                        EvalState.judge_score,
+                        rx.badge(
+                            EvalState.judge_score,
+                            color_scheme="green",
+                            variant="soft",
+                            class_name="text-sm font-semibold rounded-full",
+                        ),
                     ),
                     class_name="items-center mb-2",
                 ),
@@ -94,7 +106,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                     rx.vstack(
                         rx.heading("Reason", size="3"),
                         rx.box(
-                            rx.scroll_area(MessageState.judge_reason),
+                            rx.scroll_area(EvalState.judge_reason),
                             class_name="w-full h-full overflow-y-auto rounded-lg scroll-clean",
                         ),
                         class_name="h-[90%] w-full flex flex-col gap-2 min-h-0",
@@ -105,7 +117,7 @@ def eval_case_dialog(eval_case_id: str) -> rx.Component:
                             class_name="ml-auto",
                             on_click=[
                                 lambda: AgentState.set_optimize_feedback(  # type: ignore
-                                    MessageState.judge_reason
+                                    EvalState.judge_reason
                                 ),
                                 PageState.open_prompt_optimize_dialog,
                             ],

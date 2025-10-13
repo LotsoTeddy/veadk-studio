@@ -1,6 +1,6 @@
 import reflex as rx
 from studio.consts import GITHUB_OAUTH_URL, VE_OAUTH_URL
-from studio.states.chat_state import MessageState
+from studio.states.chat_state import SessionState
 
 
 def login_page() -> rx.Component:
@@ -36,8 +36,8 @@ def login_page() -> rx.Component:
                     ),
                     rx.input(
                         rx.input.slot(rx.icon("user")),
-                        value=MessageState.user_id,
-                        on_change=MessageState.set_user_id,  # type: ignore
+                        value=SessionState.user_id,
+                        on_change=SessionState.set_user_id,  # type: ignore
                         size="3",
                         width="100%",
                     ),

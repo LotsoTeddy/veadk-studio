@@ -36,7 +36,11 @@ class AgentState(rx.State):
 
     optimize_prompt: str = ""
 
-    is_optimizing: bool = False
+    optimizing: bool = False
+
+    @rx.var
+    def system_prompt(self) -> str:
+        return str(self.agent.instruction) if self.agent else ""
 
     @rx.var
     def list_agents(self) -> list[str]:
@@ -79,14 +83,14 @@ class AgentState(rx.State):
             workspace_id=os.getenv("PROMPT_PILOT_WORKSPACE_ID", ""),
         )
 
-        self.is_optimizing = True
+        self.optimizing = True
 
         self.optimize_prompt = prompt_pilot_client.optimize(
             agents=[self.agent],  # type: ignore
             feedback=data["feedback"],
         )
 
-        self.is_optimizing = False
+        self.optimizing = False
 
     @rx.var
     def veadk_version(self) -> str:

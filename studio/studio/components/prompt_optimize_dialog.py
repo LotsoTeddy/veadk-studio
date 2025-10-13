@@ -20,7 +20,7 @@ def prompt_optimize_dialog() -> rx.Component:
                                 "System prompt", class_name="text-lg font-semibold mb-3"
                             ),
                             rx.text_area(
-                                # value=str(AgentState.agent.instruction),
+                                value=AgentState.system_prompt,
                                 name="instruction",
                                 class_name=(
                                     "w-full h-full min-h-0 resize-none overflow-y-auto "
@@ -56,7 +56,19 @@ def prompt_optimize_dialog() -> rx.Component:
                             class_name="h-[90%] w-full flex flex-col gap-2 min-h-0",
                         ),
                         rx.flex(
-                            rx.button("Optimize", type="submit"),
+                            rx.button(
+                                rx.cond(
+                                    AgentState.optimizing,
+                                    rx.spinner(size="1"),
+                                    "Optimize",
+                                ),
+                                disabled=rx.cond(
+                                    AgentState.optimizing,
+                                    True,
+                                    False,
+                                ),
+                                type="submit",
+                            ),
                             class_name="h-[10%] w-full items-end justify-end",
                         ),
                         on_submit=AgentState.optimize_system_prompt,
