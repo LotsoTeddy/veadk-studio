@@ -1,4 +1,5 @@
 import reflex as rx
+from fastapi import background
 from studio.components.eval_case_dialog import eval_case_dialog
 from studio.components.event_drawer import event_drawer
 from studio.components.hints import hints
@@ -178,14 +179,15 @@ def render_message(message: Message) -> rx.Component:
 
 def info_bar() -> rx.Component:
     return rx.hstack(
-        rx.hstack(
-            rx.image(src="/agent_avatar.webp", class_name="h-8 w-8"),
-            rx.text(
-                AgentState.agent.name, class_name="text-sm font-semibold", color="white"
-            ),
-            rx.badge(AgentState.agent.model_name, class_name="text-xs"),
-            spacing="2",
-            align="center",
+        rx.button(
+            rx.text(AgentState.agent.name, class_name="text-lg ", color="white"),
+            rx.icon("chevron-down", color="#afafaf"),
+            background="transparent",
+            class_name="cursor-pointer",
+            _hover={
+                "background": "#303030",
+                "transition": "background 0.1s",
+            },
         ),
         rx.hstack(
             rx.tooltip(
@@ -201,28 +203,28 @@ def info_bar() -> rx.Component:
                 ),
                 content="Create a new session",
             ),
-            rx.tooltip(
-                rx.button(
-                    rx.icon("save", size=20, color="white"),
-                    on_click=[
-                        rx.toast("Save session to long-term memory"),
-                    ],
-                    class_name="cursor-pointer",
-                    variant="ghost",
-                    _hover={"background": "none"},
-                ),
-                content="Save session",
-            ),
+            # rx.tooltip(
+            #     rx.button(
+            #         rx.icon("save", size=20, color="white"),
+            #         on_click=[
+            #             rx.toast("Save session to long-term memory"),
+            #         ],
+            #         class_name="cursor-pointer",
+            #         variant="ghost",
+            #         _hover={"background": "none"},
+            #     ),
+            #     content="Save session",
+            # ),
             spacing="3",
         ),
-        class_name="w-1/2 py-2 mx-auto",
+        class_name="w-full px-4 mx-auto",
         align="center",
         justify="between",
     )
 
 
 def messages_area() -> rx.Component:
-    return rx.auto_scroll(
+    return rx.scroll_area(
         rx.box(
             rx.foreach(
                 MessageState.message_list,
@@ -311,10 +313,18 @@ def input_bar() -> rx.Component:
                 rx.upload.root(
                     rx.button(
                         rx.icon(tag="plus", size=20, color="white"),
-                        class_name="rounded-xl cursor-pointer hover:bg-slate-700",
+                        class_name="rounded-xl cursor-pointer",
                         background="transparent",
+                        _hover={
+                            "background": "#3f3f3f",
+                            "transition": "background 0.25s ease",
+                        },
                     ),
                     id="user_images_upload",
+                    accept={
+                        "image/png": [".png"],
+                        "image/jpeg": [".jpg", ".jpeg"],
+                    },
                     on_drop=MessageState.set_user_message_images_draft(
                         rx.upload_files(upload_id="user_images_upload")  # type: ignore
                     ),
@@ -385,13 +395,13 @@ def input_bar() -> rx.Component:
         color="white",
         border_width="1px",
         border_color="#ffffff0d",
-        class_name="min-w-0 min-h-0 rounded-2xl w-1/2 mx-auto px-4 py-2",
+        class_name="min-w-0 min-h-0 rounded-2xl w-1/2 mx-auto p-2",
     )
 
 
 def tips() -> rx.Component:
     return rx.text(
-        f"VeADK {AgentState.veadk_version} | Session {SessionState.session_id}",
+        f"VeADK {AgentState.veadk_version}",
         class_name="text-xs text-slate-9 mx-auto",
     )
 

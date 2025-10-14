@@ -15,6 +15,11 @@ def agent_dialog() -> rx.Component:
                         align="start",
                     ),
                     rx.data_list.item(
+                        rx.data_list.label("Model"),
+                        rx.data_list.value(AgentState.agent.model_name),
+                        align="start",
+                    ),
+                    rx.data_list.item(
                         rx.data_list.label("Description"),
                         rx.data_list.value(AgentState.agent.description),
                     ),

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import reflex as rx
+from veadk.integrations.ve_faas.ve_faas import VeFaaS
 
 
 class DeployState(rx.State):
@@ -13,11 +14,15 @@ class DeployState(rx.State):
 
     @rx.event
     def deploy(self, deploy_config: dict):
-        # vefaas_application_name = deploy_config["vefaas_application_name"]
-        # veapig_instance_name = deploy_config["veapig_instance_name"]
-        # enable_key_auth = deploy_config["enable_key_auth"]
+        vefaas_application_name = deploy_config["vefaas_application_name"]
+        veapig_instance_name = deploy_config["veapig_instance_name"]
+        enable_key_auth = deploy_config["enable_key_auth"]
 
-        pass
+        vefaas_client = VeFaaS(access_key="", secret_key="")
+
+        vefaas_client.deploy(
+            name=vefaas_application_name, path="", gateway_name=veapig_instance_name
+        )
 
     @rx.event
     def upload_to_vefaas(self):

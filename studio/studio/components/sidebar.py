@@ -1,3 +1,5 @@
+from re import S
+
 import reflex as rx
 from google.adk.sessions import Session
 from studio.components.agent_dialog import agent_dialog
@@ -11,8 +13,13 @@ from studio.states.page_state import PageState
 def logo_area() -> rx.Component:
     return rx.hstack(
         rx.image(src="/volcengine-color.svg", class_name="h-6 w-6"),
-        rx.text(
-            "VeADK Studio", class_name="text-sm font-semibold ml-auto", color="white"
+        rx.button(
+            rx.icon("settings", color="white", size=18),
+            class_name="ml-auto p-1 opacity-70 hover:opacity-100 cursor-pointer",
+            variant="ghost",
+            _hover={
+                "background": "inherit",
+            },
         ),
         spacing="2",
         align="center",
@@ -44,9 +51,11 @@ def option_item(icon: str, title: str, on_click: list = []) -> rx.Component:
 
 def option_area() -> rx.Component:
     return rx.vstack(
-        option_item("bot", "Agent", on_click=[PageState.open_agent_dialog]),
+        option_item("bot", "Agent Details", on_click=[PageState.open_agent_dialog]),
         option_item(
-            "sparkles", "Prompt", on_click=[PageState.open_prompt_optimize_dialog]
+            "sparkles",
+            "Prompt Optimization",
+            on_click=[PageState.open_prompt_optimize_dialog],
         ),
         option_item("upload", "Deploy", on_click=[PageState.open_deploy_dialog]),
         spacing="1",
@@ -77,6 +86,9 @@ def session_item(session: Session) -> rx.Component:
             "background": "#303030",
             "transition": "background 0.1s",
         },
+        background=rx.cond(
+            session.id == SessionState.session.id, "#ffffff0d", "inherit"
+        ),
     )
 
 
@@ -85,7 +97,7 @@ def session_area() -> rx.Component:
         rx.hstack(
             rx.text(
                 "SESSIONS",
-                class_name="px-2 text-slate-11 text-xs font-semibold",
+                class_name="px-2 text-slate-11 text-xs font-light",
             ),
             # rx.badge(ChatState.num_sessions),
             spacing="1",
@@ -151,7 +163,7 @@ def sidebar() -> rx.Component:
         option_area(),
         session_area(),
         user_area(),
-        spacing="5",
+        spacing="4",
         align="start",
         class_name="min-h-0 h-full w-full px-2 py-2",
     )
